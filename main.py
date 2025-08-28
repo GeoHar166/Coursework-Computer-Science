@@ -183,7 +183,7 @@ class car:
 
                     distance = math.hypot(self.x - car.x, self.y - car.y )  # distance between car and other cars on the road
 
-                    if distance <= 150:      #if car is close and going the same direction, stop!
+                    if distance <= 110:      #if car is close and going the same direction, stop!
                         if int(-1*self.angle) + 180 == int(-1*car.angle) or int(-1*self.angle) - 180 == int(-1*car.angle):  
                             pass    #if travelling direct opposite directions, do nothing
                                     #if not, stay behind car ahead
@@ -194,7 +194,6 @@ class car:
                                     self.speed = car.speed
                                 if abs(self.x - car.x) < 100 or abs(self.y - car.y) < 100:
                                     self.speed -= self.speed/10
-                                    print(self.path[0],"yo twin")
                                 closecars += 1
                             
                         if self.behindcar == True:
