@@ -78,9 +78,10 @@ class car:
         self.speed = self.basespeed
         self.path = path
         self.paused = False
+        self.behindcar = False
         
         self.target = 0
-        self.car_img = pygame.image.load("assets/car.webp")
+        self.car_img = pygame.image.load("car.webp")
         self.car_img = pygame.transform.scale(self.car_img,(70,40))       
 
     def draw(self): 
@@ -96,6 +97,9 @@ class car:
             dy = self.path[self.target][1] - self.y
         except IndexError:
             dx,dy = 0,0
+
+        self.dx = dx
+        self.dy = dy
 
         distance = math.hypot(dx, dy) # straight line distance between car and next point
 
@@ -121,7 +125,7 @@ class car:
             angle_rad = math.atan2(-dir_y, dir_x)       # 0 is right, 180 left, 90 up, -90 down
             self.angle = math.degrees(angle_rad)        #updated angle algorithm    
 
-    def nearcar(self,cars):  # is this car near enough another car to stop
+    def oldnearcar(self,cars):  # is this car near enough another car to stop
         closecars = 0
         if self.paused == False:
             for car in cars:
@@ -164,11 +168,58 @@ class car:
         else:
             self.speed = 0
 
-    def pause(self):
-        self.paused= True
-    
-    def play(self):
-        self.paused = False
+    def nearcar(self,cars):
+        closecars = 0
+
+        if self.paused == False:
+            for car in cars:
+                #prevposself = self.path[self.target-1]
+                try:
+                    nextposself = self.path[self.target]
+                    prevposcar = car.path[car.target-2]
+
+                    if car is self: #dont compare with itself
+                        continue
+
+                    distance = math.hypot(self.x - car.x, self.y - car.y )  # distance between car and other cars on the road
+
+                    if distance <= 150:      #if car is close and going the same direction, stop!
+                        if int(-1*self.angle) + 180 == int(-1*car.angle) or int(-1*self.angle) - 180 == int(-1*car.angle):  
+                            pass    #if travelling direct opposite directions, do nothing
+                                    #if not, stay behind car ahead
+                        else:       
+                            if nextposself == prevposcar:
+                                self.behindcar = True
+                                if self.speed >= car.speed:
+                                    self.speed = car.speed
+                                if abs(self.x - car.x) < 100 or abs(self.y - car.y) < 100:
+                                    self.speed -= self.speed/10
+                                    print(self.path[0],"yo twin")
+                                closecars += 1
+                            
+                        if self.behindcar == True:
+                            if nextposself in (car.path[car.target+1],car.path[car.target],car.path[car.target-1],car.path[car.target-2],car.path[car.target-3]):
+                                self.behindcar = True
+                                self.speed = car.speed
+
+                            if abs(self.x - car.x) < 100 or abs(self.y - car.y) < 100:
+                                self.speed -= self.speed/10
+
+                            else:
+                                self.behindcar = False
+
+                    else:
+                        if closecars < 1:
+                            while self.speed < self.basespeed:
+                                self.speed += self.basespeed/10
+                                
+
+                            
+                except IndexError:
+                    pass        
+                        
+        else:
+            self.speed = 0
 
 
 
