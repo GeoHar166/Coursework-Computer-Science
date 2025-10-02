@@ -4,14 +4,16 @@ import pygame_gui
 
 
 
-
+#pygame.Rect.collidepoint() !!!!!!!!
 class car:
-    def __init__(self,speed):
+    def __init__(self,speed,start,finish):
         self.angle = 0
         self.basespeed = speed
         self.speed = self.basespeed
         self.paused = False
         self.behindcar = False
+        self.x,self.y = lanelinks[start][1]
+        self.finishx,self.finishy = lanelinks[finish][1]
         
         self.target = 0
         self.car_img = pygame.image.load("car.webp")
@@ -26,8 +28,8 @@ class car:
     
     def move(self):  #alternate move() function
         try:
-            dx = self.path[self.target][0] - self.x
-            dy = self.path[self.target][1] - self.y
+            dx = self.finishx - self.x
+            dy = self.finishy - self.y
         except IndexError:
             dx,dy = 0,0
 
@@ -36,13 +38,13 @@ class car:
 
         distance = math.hypot(dx, dy) # straight line distance between car and next point
 
-        if distance < self.speed:
-            try:
-                self.x, self.y = self.path[self.target]   
-                self.target += 1    # so that the car does not drive past the checkpoint    
-            except IndexError:  #if car reaches end before others, do nothing
-                pass
-            return
+        # if distance < self.speed:
+        #     try:
+        #         self.x, self.y = self.path[self.target]   
+        #         self.target += 1    # so that the car does not drive past the checkpoint    
+        #     except IndexError:  #if car reaches end before others, do nothing
+        #         pass
+        #     return
 
 
         # direction
@@ -155,16 +157,18 @@ def main():
     black = (0,0,0)
     grey = (180,180,180)
 
+    car1 = car(1,"B","G")
+    
+
 
 #DRAW THIS BEFORE LOOP STARTS AS IT DOESNT CHANGE
-    screen.fill(green)
-    for node in lanelinks:
-        for i in lanelinks[node][0]:
-            draw(screen,lanelinks[node][1],lanelinks[i][1]) 
 
-        rect = pygame.Rect(0,0,100,100)
-        rect.center = (lanelinks[node][1])
-        pygame.draw.rect(screen,(180,180,180),rect)
+
+
+        # rect = pygame.Rect(0,0,100,100)
+        # rect.center = (lanelinks[node][1])
+        # pygame.draw.rect(screen,(180,180,180),rect)
+
 
     
 
@@ -176,15 +180,26 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+        
 
+        
         clock.tick(fps)
 
 #DRAW HERE FOR CHANGING THINGS
-    
+        
 
-        #lane1.draw(screen,lanelinks)   
 
-        time_delta = clock.tick(fps)/1000.0 #ui clock
+        screen.fill(green) #clear screen so no repeated "draws"
+        for node in lanelinks:
+            for i in lanelinks[node][0]:
+                draw(screen,lanelinks[node][1],lanelinks[i][1]) 
+        car1.draw()
+        
+#OTHER STUFF  
+
+        car1.move()
+
+        #time_delta = clock.tick(fps)/1000.0 #ui clock
 
         pygame.display.update()
 
