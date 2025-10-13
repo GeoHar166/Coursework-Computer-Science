@@ -69,31 +69,6 @@ class car:
         distanceCtotal = math.sqrt((distanceAx**2)+(distanceBy**2)) # a^2 + b^2 = c^2
         return distanceCtotal
 
-    def recursion_for_pathfinder(self,node,queue,visited):
-        for link in lanelinks[node]:
-
-            if link not in queue and link not in visited:
-                queue.append(link)
-                
-        if queue: # is not empty
-            nextnode = queue.pop(0)
-            visited.append(nextnode)
-
-            if nextnode in lanelinks:
-                self.recursion_for_pathfinder(queue,lanelinks[link],visited)    #use link because it is the last link looked at so fulfills the breadthfirstsearch
-
-
-    def findpath(self):     #find shortest path (dykstra's?)
-        queue = []  #   current vertex, prev vertex, path cost
-        visted = []
-        prev_node = [] 
-        path_found = []
-
-        queue.append(self.finish)
-        self.recursion_for_pathfinder(self.start,queue,visted)
-        print(visted)
-
-
       
 
     def nearcar(self,cars):
