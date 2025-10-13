@@ -8,7 +8,7 @@ screen=white=black=grey=columns=grid = None
 #define vars
 
 
-#MAIN ROAD CLASS, THEN INHERITED CLASSES FOR DIFFERENT ROAD TYPES
+#MAIN LANE CLASS, THEN INHERITED CLASSES FOR DIFFERENT LANE TYPES
 
 
 class lane:
@@ -24,6 +24,7 @@ class lanehori(lane):
         self.width = 50
         self.height = 50
         self.right = right #True or false - is it moving right?
+        self.direction = "hori"
 
     def draw(self):
         pygame.draw.rect(screen,grey,(self.x,self.y,(self.width)*self.length,self.height))  # display road
@@ -47,6 +48,7 @@ class lanevert(lane):
         super().__init__(x,y,length)
         self.width = 50
         self.height = 50
+        self.direction = "vert"
         self.down = down #True or false - is it moving down?
 
     def draw(self):
@@ -65,7 +67,15 @@ class lanevert(lane):
         return self.down
     
 # end of lane class
-        
+
+            
+
+# start of road class
+class road():
+    def __init__(self,lane1,lane2):
+        pass
+
+# end of road class
 
 # CAR CLASS - need to attatch to roads so that they know where they are on the road and can position themselves without my input            
 
@@ -243,8 +253,8 @@ def main():
     # GLOBAL VARs
     global screen,white,black,grey,columns,grid
 
-    width = 1800        #pixel size of window
-    height = 1000
+    width = 1800        
+    height = 1000       #pixel size of window
     screen = pygame.display.set_mode((width,height))    #make screen for display
 
     running = True
@@ -264,6 +274,7 @@ def main():
     grid = [["" for i in range(rows)] for i in range(cols)]
 
     cars = []
+    lanes = []
 
             
     #lanes GO LEFT TO RIGHT/UP TO DOWN
@@ -276,6 +287,19 @@ def main():
     lane6 = lanehori(50,50,26,False)
     lane7 = lanevert(0,0,20,False)
     lane8 = lanevert(50,50,19,True)
+
+    lanes = []
+    lanes.append(lane1)
+    lanes.append(lane2)
+    lanes.append(lane3)
+    lanes.append(lane4)
+    lanes.append(lane5)
+    lanes.append(lane6)
+    lanes.append(lane7)
+    lanes.append(lane8)
+
+
+    #road1 = road()
 
     # car  
 
