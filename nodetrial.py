@@ -12,6 +12,9 @@ class car:
         self.speed = self.basespeed
         self.paused = False
         self.behindcar = False
+
+        self.start = start
+        self.finish = finish
         self.x,self.y = lanelinks[start][1]
         self.finishx,self.finishy = lanelinks[finish][1]
         
@@ -59,6 +62,39 @@ class car:
 
             angle_rad = math.atan2(-dir_y, dir_x)       # 0 is right, 180 left, 90 up, -90 down
             self.angle = math.degrees(angle_rad)        #updated angle algorithm    
+
+    def find_node_distance(self,node1,node2):
+        distanceAx = lanelinks[node1][1][0]-lanelinks[node2][1][0]  # x-x
+        distanceBy = lanelinks[node1][1][1]-lanelinks[node2][1][1]  # y-y
+        distanceCtotal = math.sqrt((distanceAx**2)+(distanceBy**2)) # a^2 + b^2 = c^2
+        return distanceCtotal
+
+    def recursion_for_pathfinder(self,node,queue,visited):
+        for link in lanelinks[node]:
+
+            if link not in queue and link not in visited:
+                queue.append(link)
+                
+        if queue: # is not empty
+            nextnode = queue.pop(0)
+            visited.append(nextnode)
+
+            if nextnode in lanelinks:
+                self.recursion_for_pathfinder(queue,lanelinks[link],visited)    #use link because it is the last link looked at so fulfills the breadthfirstsearch
+
+
+    def findpath(self):     #find shortest path (dykstra's?)
+        queue = []  #   current vertex, prev vertex, path cost
+        visted = []
+        prev_node = [] 
+        path_found = []
+
+        queue.append(self.finish)
+        self.recursion_for_pathfinder(self.start,queue,visted)
+        print(visted)
+
+
+      
 
     def nearcar(self,cars):
         closecars = 0
@@ -116,24 +152,24 @@ class lane:
     def __init__(self):
         pass
 
-def draw(screen,start,end):
+def lanedraw(screen,start,end):
         #pygame.draw.line(screen,colour,(x,y),(x,y),width)
-        pygame.draw.line(screen,(180,180,180),start,end,100)
+        pygame.draw.line(screen,(180,180,180),start,end,50)     #change so width is 100 when 2 way road
 
 #lanelinks[A][0] = links
 #lanelinks[A][1] = properties (x,y)
 
 lanelinks = {
-    "A" : [["J","B"],[50,600]],
-    "B" : [["A","C"],[50,50]],
-    "C" : [["B","D"],[300,50]],
-    "D" : [["C","E"],[300,600]],
-    "E" : [["D","F"],[700,600]],
-    "F" : [["E","G"],[600,50]],
-    "G" : [["F","H"],[1500,50]],
-    "H" : [["G","I"],[1100,400]],
-    "I" : [["H","J"],[1100,900]],
-    "J" : [["I","A"],[300,900]]
+    "A" : [["J","B","D"],[25,575]], #  +25 to coordinate to have lane locked into 
+    "B" : [["A","C"],[25,25]],
+    "C" : [["B","D"],[275,25]],
+    "D" : [["C","E","A"],[275,575]],
+    "E" : [["D","F"],[675,575]],
+    "F" : [["E","G"],[575,25]],
+    "G" : [["F","H"],[1475,25]],
+    "H" : [["G","I"],[1075,375]],
+    "I" : [["H","J"],[1075,875]],
+    "J" : [["I","A"],[275,875]]
 
 }
 
@@ -157,7 +193,7 @@ def main():
     black = (0,0,0)
     grey = (180,180,180)
 
-    car1 = car(1,"B","G")
+    car1 = car(1,"B","I")
     
 
 
@@ -192,7 +228,7 @@ def main():
         screen.fill(green) #clear screen so no repeated "draws"
         for node in lanelinks:
             for i in lanelinks[node][0]:
-                draw(screen,lanelinks[node][1],lanelinks[i][1]) 
+                lanedraw(screen,lanelinks[node][1],lanelinks[i][1]) 
         car1.draw()
         
 #OTHER STUFF  
