@@ -1,6 +1,38 @@
 import pygame
 import math
 import pygame_gui
+import threading
+import time
+
+lanelinks = {
+    "A" : [["J","B","D"],[25,575]], #  +25 to coordinate to have lane locked into grid 
+    "B" : [["A","C"],[25,25]],
+    "C" : [["B","D"],[275,25]],
+    "D" : [["C","E","A"],[275,575]],
+    "E" : [["D","F"],[675,575]],
+    "F" : [["E","G"],[575,25]],
+    "G" : [["F","H"],[1475,25]],
+    "H" : [["G","I"],[1075,375]],
+    "I" : [["H","J"],[1075,875]],
+    "J" : [["I","A"],[275,875]]
+
+}
+
+    #GLOBAL VARS
+# colours for later use
+#white = (255, 255, 255)
+#red = (180, 0, 0)
+green = (30,100,30)
+#blue = (0, 0, 180)
+#black = (0,0,0)
+grey = (100,100,100)
+
+width = 1800        
+height = 1000       #pixel size of window
+
+screen = pygame.display.set_mode((width,height))    #make screen for display
+
+cars = []
 
 
 
@@ -8,8 +40,10 @@ import pygame_gui
 class car:
     def __init__(self,speed,start,finish):
         self.angle = 0
+
         self.basespeed = speed
         self.speed = self.basespeed
+
         self.paused = False
         self.behindcar = False
 
@@ -21,9 +55,13 @@ class car:
 
         self.target = 1
         
-        self.target = 0
+        #self.target = 0
+
         self.car_img = pygame.image.load("car.webp")
-        self.car_img = pygame.transform.scale(self.car_img,(70,40))       
+        self.car_img = pygame.transform.scale(self.car_img,(70,40))  
+
+        table = dykstras(self.start,nodes)
+        self.getpath(table)     
 
     def draw(self): 
         rotated_img = pygame.transform.rotate(self.car_img, self.angle) 
@@ -37,7 +75,7 @@ class car:
         self.next = self.path[self.target]
         self.nextx,self.nexty = lanelinks[self.next][1]
     
-    def move(self):  #alternate move() function
+    def move(self):
         try:
             dx = self.nextx - self.x
             dy = self.nexty - self.y
@@ -51,7 +89,8 @@ class car:
                 self.nextx, self.nexty = lanelinks[self.path[self.target]][1]
                 self.target += 1    # so that the car does not drive past the checkpoint
             else:
-                self.speed = 0
+                self.speed = 0  #finished
+                return False
 
         # direction
         if distance != 0:
@@ -60,66 +99,56 @@ class car:
         else:
             dir_x,dir_y = 0,0
 
+        #actually move
         if self.speed > 0:
             self.x += dir_x * self.speed
             self.y += dir_y * self.speed
 
             angle_rad = math.atan2(-dir_y, dir_x)       # 0 is right, 180 left, 90 up, -90 down
-            self.angle = math.degrees(angle_rad)        #updated angle algorithm    
-
-
+            self.angle = math.degrees(angle_rad)        #updated angle algorithm   
+        return True 
 
     def nearcar(self,cars):
         closecars = 0
-
         if self.paused == False:
             for car in cars:
-                #prevposself = self.path[self.target-1]
-                try:
-                    nextposself = self.path[self.target]
-                    prevposcar = car.path[car.target-2]
+                if car is self: #dont compare to itself
+                    continue
+                    
+                distance = math.hypot(self.x - car.x, self.y - car.y )  # distance between car and other cars on the road
 
-                    if car is self: #dont compare with itself
-                        continue
+                if distance <= 110:
+                    self.behindcar = True
+                    if self.speed >= car.speed:
+                        self.speed = car.speed
+                    if distance <= 100:
+                        self.speed -= self.speed/10
+                    closecars += 1
+                    
+                    
+            if closecars == 0:
+                if self.speed < self.basespeed:
+                    self.speed += (self.basespeed-self.speed)/10
+                    
 
-                    distance = math.hypot(self.x - car.x, self.y - car.y )  # distance between car and other cars on the road
+    # def nearnode(self):
+    #     for node in lanelinks.keys():
+    #         distance = math.hypot(self.x - lanelinks[node][1][0], self.y - lanelinks[node][1][1])
+    #         if distance < 50:
+    #             if self.speed > self.basespeed*0.75:
+    #                 self.speed -= (self.basespeed -self.speed)/10
+    #             else:
+    #                 self.speed = 0.5
+            
+    #         else:
+    #             if self.speed < self.basespeed:
+    #                 self.speed += (self.basespeed-self.speed)/10
+    #             else:
 
-                    if distance <= 110:      #if car is close and going the same direction, stop!
-                        if int(-1*self.angle) + 180 == int(-1*car.angle) or int(-1*self.angle) - 180 == int(-1*car.angle):  
-                            pass    #if travelling direct opposite directions, do nothing
-                                    #if not, stay behind car ahead
-                        else:       
-                            if nextposself == prevposcar:
-                                self.behindcar = True
-                                if self.speed >= car.speed:
-                                    self.speed = car.speed
-                                if abs(self.x - car.x) < 100 or abs(self.y - car.y) < 100:
-                                    self.speed -= self.speed/10
-                                closecars += 1
-                            
-                        if self.behindcar == True:
-                            if nextposself in (car.path[car.target+1],car.path[car.target],car.path[car.target-1],car.path[car.target-2],car.path[car.target-3]):
-                                self.behindcar = True
-                                self.speed = car.speed
+#pseudo code:
+# if slowed down, check around to see if there are any nearby cars
+# 
 
-                            if abs(self.x - car.x) < 100 or abs(self.y - car.y) < 100:
-                                self.speed -= self.speed/10
-
-                            else:
-                                self.behindcar = False
-
-                    else:
-                        if closecars < 1:
-                            while self.speed < self.basespeed:
-                                self.speed += self.basespeed/10
-                                
-
-                            
-                except IndexError:
-                    pass        
-                        
-        else:
-            self.speed = 0
 
 class lane:
     def __init__(self):
@@ -127,7 +156,7 @@ class lane:
 
 def lanedraw(screen,start,end):
         #pygame.draw.line(screen,colour,(x,y),(x,y),width)
-        pygame.draw.line(screen,(180,180,180),start,end,50)     #change so width is 100 when 2 way road
+        pygame.draw.line(screen,(150,150,150),start,end,50)     #change so width is 100 when 2 way road
 
 
 #GLOBAL DYKSTRA FUNCTIONS:
@@ -179,6 +208,9 @@ def dykstrapath(firstnode,endnode,table):
     return path
 
 def dykstras(firstnode,nodes):
+    """
+    initialise the table for DSP
+    """
 
     visited = []
     unvisited = list(lanelinks.keys())
@@ -197,6 +229,19 @@ def dykstras(firstnode,nodes):
     return table
 #END OF DYKSTRA
 
+nodes = dykstras_nodes_create()
+
+def spawn_car():
+    while True:
+        carobj = car(1,"B","I")
+        cars.append(carobj)
+        time.sleep(60/60)
+
+def run_threaded(function):
+    thread = threading.Thread(target=function)
+    thread.start()
+
+
 #
 def main():    
 
@@ -212,12 +257,16 @@ def main():
     clock = pygame.time.Clock()
     fps = 300
 
-    car1 = car(1,"B","H")
+    run_threaded(spawn_car) 
 
-    nodes = dykstras_nodes_create()
-    table = dykstras(car1.start,nodes)
+    #cars.append(car3)
 
-    car1.getpath(table)
+    
+    #slowest_speed = 99999999999999
+
+
+        
+
 
     
 
@@ -243,44 +292,26 @@ def main():
         for node in lanelinks:
             for i in lanelinks[node][0]:
                 lanedraw(screen,lanelinks[node][1],lanelinks[i][1]) 
-        car1.draw()
+
+
         
 #OTHER STUFF  
 
-        car1.move()
+        for c in cars:
+            c.nearcar(cars)
+            moving = c.move()
+            c.draw()
+            #c.nearnode()
+            if not moving:
+                cars.remove(c)
+            
 
         #time_delta = clock.tick(fps)/1000.0 #ui clock
 
         pygame.display.update()
 
 
-lanelinks = {
-    "A" : [["J","B","D"],[25,575]], #  +25 to coordinate to have lane locked into grid 
-    "B" : [["A","C"],[25,25]],
-    "C" : [["B","D"],[275,25]],
-    "D" : [["C","E","A"],[275,575]],
-    "E" : [["D","F"],[675,575]],
-    "F" : [["E","G"],[575,25]],
-    "G" : [["F","H"],[1475,25]],
-    "H" : [["G","I"],[1075,375]],
-    "I" : [["H","J"],[1075,875]],
-    "J" : [["I","A"],[275,875]]
 
-}
-
-    #GLOBAL VARS
-# colours for later use
-white = (255, 255, 255)
-red = (180, 0, 0)
-green = (30,180,30)
-blue = (0, 0, 180)
-black = (0,0,0)
-grey = (180,180,180)
-
-width = 1800        
-height = 1000       #pixel size of window
-
-screen = pygame.display.set_mode((width,height))    #make screen for display
 
 
 
