@@ -108,8 +108,8 @@ class car:
                 self.x += xchangeperunitlength * distance
                 self.y += ychangeperunitlength * distance
 
-                angle_rad = math.atan2(-xchangeperunitlength,ychangeperunitlength)       # 0 is right, 180 left, 90 up, -90 down
-                self.angle = math.degrees(angle_rad)        #updated angle algorithm  
+                angle_rad = math.atan2(xchangeperunitlength,ychangeperunitlength)       # 0 is right, 180 left, 90 up, -90 down
+                self.angle = math.degrees(angle_rad) - 90       #updated angle algorithm  
                 distance = 0
                                 
         return True
@@ -259,7 +259,7 @@ nodes = dykstras_nodes_create()
 
 def spawn_car():
     while True:
-        carobj = car(150,"B","I")
+        carobj = car(150,"I","B")
         cars.append(carobj)
         time.sleep(60/60)
 
