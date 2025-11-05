@@ -4,6 +4,7 @@ import pygame_gui
 import threading
 import time
 import sys
+import random
 
 lanelinks = {
     "A" : [["J","B","D"],[25,575]], #  +25 to coordinate to have lane locked into grid 
@@ -66,6 +67,14 @@ class car:
         rotated_img = pygame.transform.rotate(self.car_img, self.angle) 
         rect = rotated_img.get_rect(center=(self.x, self.y)) 
         screen.blit(rotated_img, rect)
+
+    def previous_node(self):
+        """return the last node traversed by the car"""
+        return self.path[self.target - 1]
+
+    def target_node(self):
+        """return the next node to be traversed by the car"""
+        return self.path[self.target]
 
 #    def createpath(self,endx,endy):
 
@@ -130,26 +139,77 @@ class car:
         #     self.angle = math.degrees(angle_rad)        #updated angle algorithm   
         # return True 
 
+    def dist_to_targetnode(self):
+       dx,dy = self.nextx - self.x, self.nexty - self.y
+       return(math.hypot(dx,dy))
+
+    def dist_from_prevnode(self):
+        dx,dy = lanelinks[self.previous_node()][1][0] - self.x, lanelinks[self.previous_node()][1][1] - self.y
+        return(math.hypot(dx,dy))
+
+
     def nearcar(self,cars):
         closecars = 0
+        min_distance = 150
         if self.paused == False:
             for car in cars:
                 if car is self: #dont compare to itself
                     continue
-                    
-                distance = math.hypot(self.x - car.x, self.y - car.y )  # distance between car and other cars on the road
 
-                if distance <= 110:
-                    self.behindcar = True
-                    if self.speed >= car.speed:
-                        self.speed = car.speed
-                        print("close", self.x, self.y, car.x, car.y, distance, self.speed, car.speed)
-                        sys.exit()
-                    if distance <= 100:
-                        self.speed -= self.speed/10
-                        print("too close")
-                        sys.exit()
-                    closecars += 1
+                if car.previous_node() == self.previous_node() and car.target_node() == self.target_node():
+                    # same source and destination
+                    # determine distance along edge for both cars
+                    # if too close, decide if we are the car behind (less far down the edge) then slow down
+                    carremainingdist = car.dist_to_targetnode()
+                    selfremainingdist = self.dist_to_targetnode()
+                    if abs(selfremainingdist-carremainingdist) < min_distance and selfremainingdist > carremainingdist:
+                        closecars += 1
+                        if self.speed > car.speed:
+                            self.speed -= self.speed/10
+
+
+                # elif car.previous_node() == self.previous_node(): 
+                #     # same source, different destination
+                #     # determine distance along edge for both cars
+                #     # if too close, decide if we are the car behind (less far down the edge) then slow down
+                #     # this is not a realistic interaction and only occurs due to the graphical display of the simulation
+                    
+
+                elif car.target_node() == self.target_node():
+                    # different source, same destination
+                    # determine distance away from node (for self and car) if too close, furthest slows down
+                    pass
+                    
+                elif car.previous_node() == self.target_node():
+                    # self desination is car's source
+                    # determine self distance to destination and determine distance car has travelled from source
+                    # add these and if too close, self slow down
+                    carremainingdist = car.dist_from_prevnode()
+                    selfremainingdist = self.dist_to_targetnode()
+
+                    if abs(carremainingdist+selfremainingdist) < min_distance:
+                        closecars += 1
+                        if self.speed > car.speed:
+                            self.speed -= self.speed/10
+
+                # elif car.target_node() == self.previous_node():
+                #     # does not matter as it is car's responsibility to slow down
+                
+
+                    
+                # distance = math.hypot(self.x - car.x, self.y - car.y )  # distance between car and other cars on the road
+
+                # if distance <= 110:
+                #     self.behindcar = True
+                #     if self.speed >= car.speed:
+                #         self.speed = car.speed
+                #         print("close", self.x, self.y, car.x, car.y, distance, self.speed, car.speed)
+                #         # sys.exit()
+                #     if distance <= 100:
+                #         self.speed -= self.speed/10
+                #         print("too close")
+                #         # sys.exit()
+                #     closecars += 1
                     
                     
             if closecars == 0:
@@ -259,9 +319,9 @@ nodes = dykstras_nodes_create()
 
 def spawn_car():
     while True:
-        carobj = car(150,"I","B")
+        carobj = car(random.randint(125,175),"B","H")
         cars.append(carobj)
-        time.sleep(60/60)
+        time.sleep(60/30)
 
 def run_threaded(function):
     thread = threading.Thread(target=function)
@@ -306,9 +366,7 @@ def main():
 
 #DRAW HERE FOR CHANGING THINGS
 
-        # for car in cars:
-        #     # if coords == coords_of_node:
-        #     #     redo dykstras
+
 
 
         screen.fill(green) #clear screen so no repeated "draws"
