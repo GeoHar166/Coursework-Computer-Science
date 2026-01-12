@@ -3,20 +3,22 @@ import math
 import pygame_gui
 import threading
 import time
-import sys
 import random
 
+
 lanelinks = {
-    "A" : [["J","B","D"],[25,575]], #  +25 to coordinate to have lane locked into grid 
-    "B" : [["A","C"],[25,25]],
-    "C" : [["B","D"],[275,25]],
-    "D" : [["C","E","A"],[275,575]],
-    "E" : [["D","F"],[675,575]],
-    "F" : [["E","G"],[575,25]],
-    "G" : [["F","H"],[1475,25]],
-    "H" : [["G","I"],[1075,375]],
-    "I" : [["H","J"],[1075,875]],
-    "J" : [["I","A"],[275,875]]
+    "A" : [["E"],[0,333]], #  +25 to coordinate to have lane locked into grid 
+    "B" : [["H"],[0,666]],
+    "C" : [["E"],[600,0]],
+    "D" : [["F"],[1200,0]],
+    "E" : [["A","C","F","H"],[600,333]],
+    "F" : [["D","E","G","I"],[1200,333]],
+    "G" : [["F"],[1800,333]],
+    "H" : [["E","B","I","K"],[600,666]],
+    "I" : [["F","H","J","L"],[1200,666] ],
+    "J" : [["I"],[1800,666]],
+    "K" : [["H"],[600,1000]],
+    "L" : [["I"],[1200,1000]]
 
 }
 
@@ -57,7 +59,7 @@ class car:
 
         self.target = 1
 
-        self.car_img = pygame.image.load("car.webp")
+        self.car_img = pygame.image.load("car.png")
         self.car_img = pygame.transform.scale(self.car_img,(70,40))  
 
         table = dykstras(self.start,nodes)
@@ -75,8 +77,6 @@ class car:
     def target_node(self):
         """return the next node to be traversed by the car"""
         return self.path[self.target]
-
-#    def createpath(self,endx,endy):
 
     def getpath(self,table):
         self.path = dykstrapath(self.start,self.finish,table)
@@ -123,22 +123,6 @@ class car:
                                 
         return True
 
-        # # direction
-        # if distance != 0:
-        #     dir_x = dx / distance
-        #     dir_y = dy / distance
-        # else:
-        #     dir_x,dir_y = 0,0
-
-        # # actually move
-        # if self.speed * dt > 0:
-        #     self.x += dir_x * self.speed * dt
-        #     self.y += dir_y * self.speed * dt
-
-        #     angle_rad = math.atan2(-dir_y, dir_x)       # 0 is right, 180 left, 90 up, -90 down
-        #     self.angle = math.degrees(angle_rad)        #updated angle algorithm   
-        # return True 
-
     def dist_to_targetnode(self):
        dx,dy = self.nextx - self.x, self.nexty - self.y
        return(math.hypot(dx,dy))
@@ -150,7 +134,7 @@ class car:
 
     def nearcar(self,cars):
         closecars = 0
-        min_distance = 150
+        min_distance = 50
         if self.paused == False:
             for car in cars:
                 if car is self: #dont compare to itself
@@ -162,11 +146,11 @@ class car:
                     # if too close, decide if we are the car behind (less far down the edge) then slow down
                     carremainingdist = car.dist_to_targetnode()
                     selfremainingdist = self.dist_to_targetnode()
+
                     if abs(selfremainingdist-carremainingdist) < min_distance and selfremainingdist > carremainingdist:
                         closecars += 1
                         if self.speed > car.speed:
                             self.speed -= self.speed/10
-
 
                 # elif car.previous_node() == self.previous_node(): 
                 #     # same source, different destination
@@ -178,39 +162,29 @@ class car:
                 elif car.target_node() == self.target_node():
                     # different source, same destination
                     # determine distance away from node (for self and car) if too close, furthest slows down
-                    pass
+                    carremainingdist = car.dist_to_targetnode()
+                    selfremainingdist = self.dist_to_targetnode()
+
+                    if abs(selfremainingdist) > abs(carremainingdist):
+                        closecars += 1
+                        if self.speed > car.speed:
+                            self.speed -= self.speed/10
+
                     
                 elif car.previous_node() == self.target_node():
                     # self desination is car's source
                     # determine self distance to destination and determine distance car has travelled from source
                     # add these and if too close, self slow down
-                    carremainingdist = car.dist_from_prevnode()
+                    cartravelleddist = car.dist_from_prevnode()
                     selfremainingdist = self.dist_to_targetnode()
 
-                    if abs(carremainingdist+selfremainingdist) < min_distance:
+                    if abs(cartravelleddist+selfremainingdist) < min_distance:
                         closecars += 1
                         if self.speed > car.speed:
-                            self.speed -= self.speed/10
+                            self.speed -= self.speed/5
 
                 # elif car.target_node() == self.previous_node():
                 #     # does not matter as it is car's responsibility to slow down
-                
-
-                    
-                # distance = math.hypot(self.x - car.x, self.y - car.y )  # distance between car and other cars on the road
-
-                # if distance <= 110:
-                #     self.behindcar = True
-                #     if self.speed >= car.speed:
-                #         self.speed = car.speed
-                #         print("close", self.x, self.y, car.x, car.y, distance, self.speed, car.speed)
-                #         # sys.exit()
-                #     if distance <= 100:
-                #         self.speed -= self.speed/10
-                #         print("too close")
-                #         # sys.exit()
-                #     closecars += 1
-                    
                     
             if closecars == 0:
                 if self.speed < self.basespeed:
@@ -230,10 +204,6 @@ class car:
     #             if self.speed < self.basespeed:
     #                 self.speed += (self.basespeed-self.speed)/10
     #             else:
-
-#pseudo code:
-# if slowed down, check around to see if there are any nearby cars
-# 
 
 
 class lane:
@@ -274,9 +244,13 @@ def dykstras_table(visited,unvisited,table,nodes):
     for node in nodes[currentnode]:
         shortestpathposibility = table[currentnode][1] + int(nodes[currentnode][node])
 
-        if table[node][1] >= shortestpathposibility:
+        if table[node][1] > shortestpathposibility:
             table[node][1] = shortestpathposibility #   shortestdist = dist
             table[node][0] = currentnode            #   previousnode = currentnode
+
+        elif table[node][1] == shortestpathposibility and random.randint(1,2) == 2:
+            table[node][1] = shortestpathposibility #   shortestdist = dist
+            table[node][0] = currentnode 
 
     visited.append(currentnode)
     unvisited.remove(currentnode)
@@ -284,7 +258,7 @@ def dykstras_table(visited,unvisited,table,nodes):
 
 def dykstrapath(firstnode,endnode,table): 
     #SELECT PATH
-    distance = table[endnode][1]
+    # distance = table[endnode][1]
 
     path = [endnode]
     nodefind = endnode
@@ -319,7 +293,35 @@ nodes = dykstras_nodes_create()
 
 def spawn_car():
     while True:
-        carobj = car(random.randint(125,175),"B","H")
+        carobj = car(random.randint(125,175),"A","G")
+        cars.append(carobj)
+        time.sleep(60/30)
+
+        carobj = car(random.randint(100,200),"B","G")
+        cars.append(carobj)
+        time.sleep(60/30)
+
+        carobj = car(random.randint(100,200),"C","G")
+        cars.append(carobj)
+        time.sleep(60/30)
+
+        carobj = car(random.randint(100,200),"D","G")
+        cars.append(carobj)
+        time.sleep(60/30)
+
+        carobj = car(random.randint(100,200),"D","G")
+        cars.append(carobj)
+        time.sleep(60/30)
+
+        carobj = car(random.randint(100,200),"J","G")
+        cars.append(carobj)
+        time.sleep(60/30)
+        
+        carobj = car(random.randint(100,200),"K","G")
+        cars.append(carobj)
+        time.sleep(60/30)
+
+        carobj = car(random.randint(100,200),"L","G")
         cars.append(carobj)
         time.sleep(60/30)
 
@@ -327,8 +329,6 @@ def run_threaded(function):
     thread = threading.Thread(target=function)
     thread.start()
 
-
-#
 def main():    
 
     running = True
@@ -357,7 +357,8 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-        
+                print("Please kill the Terminal")
+
         dt = clock.tick(fps)/1000   # milliseconds
         now = time.time()
         if now - last > 1:
@@ -375,6 +376,8 @@ def main():
                 lanedraw(screen,lanelinks[node][1],lanelinks[i][1]) 
 
 #OTHER STUFF  
+        for c in cars:
+            c.nearcar(cars)
 
         for c in cars.copy():
             moving = c.move(dt)
@@ -383,17 +386,12 @@ def main():
             if not moving:
                 cars.remove(c)
             
-        for c in cars:
-            c.nearcar(cars)
+
             
 
         #time_delta = clock.tick(fps)/1000.0 #ui clock
 
         pygame.display.update()
-
-
-
-
 
 
 main()
