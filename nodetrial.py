@@ -22,6 +22,12 @@ lanelinks = {
 
 }
 
+lanelinksexits = []
+for key in lanelinks:
+    if len(lanelinks[key][0]) == 1:
+        lanelinksexits.append(key)
+
+
     #GLOBAL VARS
 # colours for later use
 #white = (255, 255, 255)
@@ -37,7 +43,7 @@ height = 1000       #pixel size of window
 screen = pygame.display.set_mode((width,height))    #make screen for display
 
 cars = []
-
+lights = []
 
 
 #pygame.Rect.collidepoint() !!!!!!!!
@@ -134,13 +140,18 @@ class car:
 
     def nearcar(self,cars):
         closecars = 0
-        min_distance = 50
+        min_distance = 100
+        max_check_distance = 250
         if self.paused == False:
             for car in cars:
                 if car is self: #dont compare to itself
                     continue
 
+                if math.hypot(car.x - self.x, car.y - self.y) > max_check_distance:
+                    continue
+
                 if car.previous_node() == self.previous_node() and car.target_node() == self.target_node():
+
                     # same source and destination
                     # determine distance along edge for both cars
                     # if too close, decide if we are the car behind (less far down the edge) then slow down
@@ -160,18 +171,23 @@ class car:
                     
 
                 elif car.target_node() == self.target_node():
+
                     # different source, same destination
                     # determine distance away from node (for self and car) if too close, furthest slows down
-                    carremainingdist = car.dist_to_targetnode()
-                    selfremainingdist = self.dist_to_targetnode()
 
-                    if abs(selfremainingdist) > abs(carremainingdist):
-                        closecars += 1
-                        if self.speed > car.speed:
-                            self.speed -= self.speed/10
+                    if self.speed != 0 and car.speed != 0:
+                        
+                        carremainingtime = car.dist_to_targetnode()/car.speed
+                        selfremainingtime = self.dist_to_targetnode()/self.speed
+
+                        if abs(selfremainingtime) > abs(carremainingtime):
+                            closecars += 1
+                            if self.speed > car.speed:
+                                self.speed -= self.speed/10
 
                     
                 elif car.previous_node() == self.target_node():
+
                     # self desination is car's source
                     # determine self distance to destination and determine distance car has travelled from source
                     # add these and if too close, self slow down
@@ -190,25 +206,65 @@ class car:
                 if self.speed < self.basespeed:
                     self.speed += (self.basespeed-self.speed)/10
                     
-
-    # def nearnode(self):
-    #     for node in lanelinks.keys():
-    #         distance = math.hypot(self.x - lanelinks[node][1][0], self.y - lanelinks[node][1][1])
-    #         if distance < 50:
-    #             if self.speed > self.basespeed*0.75:
-    #                 self.speed -= (self.basespeed -self.speed)/10
-    #             else:
-    #                 self.speed = 0.5
-            
-    #         else:
-    #             if self.speed < self.basespeed:
-    #                 self.speed += (self.basespeed-self.speed)/10
-    #             else:
+    def nearlight(self,lights):
+        mindist = 50
+        for light in lights:
+            if light.state in (2,3):
+                if math.hypot((light.x-self.x),(light.y-self.y)) < mindist and self.angle == light.angle:
+                    print("im a light at",self.x,self.y,", someone is near me", )
+                    self.speed = 0
 
 
 class lane:
     def __init__(self):
         pass
+
+class trafficlights:
+    def __init__(self,x,y,angle):
+        self.x = x
+        self.y = y
+        self.state = 0
+        self.light_img = pygame.image.load("trafficlightG.png")
+        self.light_img = pygame.transform.scale(self.light_img,(15,35)) 
+        self.rectlight = self.light_img.get_rect(center=(x,y))
+        self.timer = 0.0
+        self.lightlengths = [3.0,0.5,3.0,0.8]
+        self.angle = angle
+
+    def changecolour(self,dt):       
+
+        self.timer += dt
+        if self.timer >= self.lightlengths[self.state]:
+            self.timer = 0.0
+            self.state = (self.state+1)%4
+
+            if self.state == 0:
+                self.light_img = pygame.image.load("trafficlightG.png")
+            elif self.state == 1:
+                self.light_img = pygame.image.load("trafficlightY.png")    
+            elif self.state == 2:
+                self.light_img = pygame.image.load("trafficlightR.png")  
+            elif self.state == 3:
+                self.light_img = pygame.image.load("trafficlightRY.png")  
+            self.light_img = pygame.transform.scale(self.light_img,(13,35)) 
+            self.rectlight = self.light_img.get_rect(center=(self.x,self.y))
+
+    def changebyclick(self):
+        self.state = (self.state+2)%4
+        if self.state == 0:
+            self.light_img = pygame.image.load("trafficlightG.png")
+        elif self.state == 1:
+            self.light_img = pygame.image.load("trafficlightY.png")    
+        elif self.state == 2:
+            self.light_img = pygame.image.load("trafficlightR.png")  
+        elif self.state == 3:
+            self.light_img = pygame.image.load("trafficlightRY.png")  
+        self.light_img = pygame.transform.scale(self.light_img,(13,35)) 
+        self.rectlight = self.light_img.get_rect(center=(self.x,self.y))
+
+    def draw(self):
+        screen.blit(self.light_img,self.rectlight)
+        
 
 def lanedraw(screen,start,end):
         #pygame.draw.line(screen,colour,(x,y),(x,y),width)
@@ -291,43 +347,34 @@ def dykstras(firstnode,nodes):
 
 nodes = dykstras_nodes_create()
 
+
+
 def spawn_car():
     while True:
-        carobj = car(random.randint(125,175),"A","G")
-        cars.append(carobj)
-        time.sleep(60/30)
+        randpathloop = True
+        while randpathloop == True:
 
-        carobj = car(random.randint(100,200),"B","G")
-        cars.append(carobj)
-        time.sleep(60/30)
+            rand1 = random.choice(lanelinksexits)
+            rand2 = random.choice(lanelinksexits)
 
-        carobj = car(random.randint(100,200),"C","G")
-        cars.append(carobj)
-        time.sleep(60/30)
+            occupied = False
+            for c in cars:
+                if math.hypot(c.x-lanelinks[rand1][1][0],c.y-lanelinks[rand1][1][1]) < 50:
+                    occupied = True
+                    break       
 
-        carobj = car(random.randint(100,200),"D","G")
-        cars.append(carobj)
-        time.sleep(60/30)
+            if not occupied and rand1 != rand2:
+                randpathloop = False
 
-        carobj = car(random.randint(100,200),"D","G")
+        carobj = car(random.randint(100,200),rand1,rand2)
         cars.append(carobj)
-        time.sleep(60/30)
+        time.sleep(60/60)
 
-        carobj = car(random.randint(100,200),"J","G")
-        cars.append(carobj)
-        time.sleep(60/30)
-        
-        carobj = car(random.randint(100,200),"K","G")
-        cars.append(carobj)
-        time.sleep(60/30)
-
-        carobj = car(random.randint(100,200),"L","G")
-        cars.append(carobj)
-        time.sleep(60/30)
 
 def run_threaded(function):
     thread = threading.Thread(target=function)
     thread.start()
+
 
 def main():    
 
@@ -345,19 +392,43 @@ def main():
         
 
     #cars.append(car3)
-
     
-    run_threaded(spawn_car) 
-        
+    run_threaded(spawn_car)
+
+    # node @ 600, 333
+
+    trafficlighttest = trafficlights(600-60,333-42.5,0)   #NW
+    trafficlight2 = trafficlights(600+32.5,333-67.5,-90)    #NE
+    trafficlight3 = trafficlights(600+60,333+42.5,-180)      #SE
+    trafficlight4 = trafficlights(600-32.5,333+67.5,90)    #SW
+
+
+    lights.append(trafficlighttest)
+    lights.append(trafficlight2)
+    lights.append(trafficlight3)
+    lights.append(trafficlight4)
+    
+    lights[1].state += 2
+    lights[2].state += 2    #clicklightquad() only
+    lights[3].state += 2
+
 
     last = time.time()
 
+    clicklightquadrepeats = 0
+
     while running:
         
+#HERE FOR INPUTS
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
                 print("Please kill the Terminal")
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                lights[clicklightquadrepeats].changebyclick()
+                lights[(clicklightquadrepeats+1)%4].changebyclick()
+                clicklightquadrepeats = (clicklightquadrepeats+1)%4
+
 
         dt = clock.tick(fps)/1000   # milliseconds
         now = time.time()
@@ -365,19 +436,29 @@ def main():
             print(dt, now - last)
         last = now
 
+
+
+
+
 #DRAW HERE FOR CHANGING THINGS
 
 
-
+        
 
         screen.fill(green) #clear screen so no repeated "draws"
         for node in lanelinks:
             for i in lanelinks[node][0]:
                 lanedraw(screen,lanelinks[node][1],lanelinks[i][1]) 
+            
+        #trafficlighttest.changecolour(dt)
+        for trafficlight in lights:
+            trafficlight.draw()
+
 
 #OTHER STUFF  
         for c in cars:
             c.nearcar(cars)
+            c.nearlight(lights)
 
         for c in cars.copy():
             moving = c.move(dt)
@@ -396,3 +477,11 @@ def main():
 
 main()
 pygame.quit()
+
+# traffic lights go right way                                   # done
+# multiple traffic lights                                       # done
+# random path                                                   # done
+# maybe overlapping objects in order to "stresst" stress test   # done
+
+# error at entry nodes stopping     #
+# error at crossing nodes traffic   #
