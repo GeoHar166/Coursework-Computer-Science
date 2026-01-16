@@ -29,13 +29,16 @@ for key in lanelinks:
 
 
     #GLOBAL VARS
+
 # colours for later use
+green = (30,100,30)
+grey = (100,100,100)
+"""
 #white = (255, 255, 255)
 #red = (180, 0, 0)
-green = (30,100,30)
 #blue = (0, 0, 180)
 #black = (0,0,0)
-grey = (100,100,100)
+"""
 
 width = 1800        
 height = 1000       #pixel size of window
@@ -137,7 +140,6 @@ class car:
         dx,dy = lanelinks[self.previous_node()][1][0] - self.x, lanelinks[self.previous_node()][1][1] - self.y
         return(math.hypot(dx,dy))
 
-
     def nearcar(self,cars):
         closecars = 0
         min_distance = 100
@@ -151,10 +153,10 @@ class car:
                     continue
 
                 if car.previous_node() == self.previous_node() and car.target_node() == self.target_node():
-
                     # same source and destination
                     # determine distance along edge for both cars
                     # if too close, decide if we are the car behind (less far down the edge) then slow down
+
                     carremainingdist = car.dist_to_targetnode()
                     selfremainingdist = self.dist_to_targetnode()
 
@@ -163,12 +165,14 @@ class car:
                         if self.speed > car.speed:
                             self.speed -= self.speed/10
 
-                # elif car.previous_node() == self.previous_node(): 
+                        #print("nearcar1")
+
+                    """ # elif car.previous_node() == self.previous_node(): 
                 #     # same source, different destination
                 #     # determine distance along edge for both cars
                 #     # if too close, decide if we are the car behind (less far down the edge) then slow down
                 #     # this is not a realistic interaction and only occurs due to the graphical display of the simulation
-                    
+                """
 
                 elif car.target_node() == self.target_node():
 
@@ -185,34 +189,48 @@ class car:
                             if self.speed > car.speed:
                                 self.speed -= self.speed/10
 
+                            if self.speed == 0:
+                                print("nearcar2")
                     
-                elif car.previous_node() == self.target_node():
+                    else:
+                        if self.dist_to_targetnode() + car.dist_to_targetnode() < min_distance:
+                            if self.dist_to_targetnode() < car.dist_to_targetnode() and car.nearlight(self.lights) == False:
+                                closecars += 1
 
+
+
+                    
+                elif car.previous_node() == self.target_node() and car.target_node() != self.previous_node():
                     # self desination is car's source
                     # determine self distance to destination and determine distance car has travelled from source
                     # add these and if too close, self slow down
                     cartravelleddist = car.dist_from_prevnode()
                     selfremainingdist = self.dist_to_targetnode()
 
-                    if abs(cartravelleddist+selfremainingdist) < min_distance:
+                    if abs(cartravelleddist) < 75 and abs(selfremainingdist) < 75:
                         closecars += 1
                         if self.speed > car.speed:
                             self.speed -= self.speed/5
 
-                # elif car.target_node() == self.previous_node():
-                #     # does not matter as it is car's responsibility to slow down
+                        if self.speed == 0:
+                            print("nearcar3")
+            
+                """# elif car.target_node() == self.previous_node():
+                #     # does not matter as it is car's responsibility to slow down"""
                     
             if closecars == 0:
                 if self.speed < self.basespeed:
                     self.speed += (self.basespeed-self.speed)/10
                     
     def nearlight(self,lights):
+        self.lights = lights
         mindist = 50
         for light in lights:
             if light.state in (2,3):
                 if math.hypot((light.x-self.x),(light.y-self.y)) < mindist and self.angle == light.angle:
-                    print("im a light at",self.x,self.y,", someone is near me", )
+                    #print("im a light at",self.x,self.y,", someone is near me", )
                     self.speed = 0
+                    return True
 
 
 class lane:
@@ -263,6 +281,16 @@ class trafficlights:
         self.rectlight = self.light_img.get_rect(center=(self.x,self.y))
 
     def draw(self):
+        if self.state == 0:
+            self.light_img = pygame.image.load("trafficlightG.png")
+        elif self.state == 1:
+            self.light_img = pygame.image.load("trafficlightY.png")    
+        elif self.state == 2:
+            self.light_img = pygame.image.load("trafficlightR.png")  
+        elif self.state == 3:
+            self.light_img = pygame.image.load("trafficlightRY.png")  
+        self.light_img = pygame.transform.scale(self.light_img,(13,35)) 
+        self.rectlight = self.light_img.get_rect(center=(self.x,self.y))
         screen.blit(self.light_img,self.rectlight)
         
 
@@ -383,10 +411,6 @@ def main():
 
 #DRAW THIS BEFORE LOOP STARTS AS IT DOESNT CHANGE
 
-        # rect = pygame.Rect(0,0,100,100)
-        # rect.center = (lanelinks[node][1])
-        # pygame.draw.rect(screen,(180,180,180),rect)
-
     clock = pygame.time.Clock()
     fps = 30
         
@@ -411,6 +435,11 @@ def main():
     lights[1].state += 2
     lights[2].state += 2    #clicklightquad() only
     lights[3].state += 2
+
+    lights[0].draw()
+    lights[1].draw()
+    lights[2].draw()  #clicklightquad() only
+    lights[3].draw()
 
 
     last = time.time()
@@ -483,5 +512,5 @@ pygame.quit()
 # random path                                                   # done
 # maybe overlapping objects in order to "stresst" stress test   # done
 
-# error at entry nodes stopping     #
+# error at entry nodes stopping     # FIX: only do the (first (maybe all)) nearcar check if it is not an enterance (adj nodes > 1) please.. work... !!!
 # error at crossing nodes traffic   #
