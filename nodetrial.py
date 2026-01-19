@@ -4,7 +4,9 @@ import pygame_gui
 import threading
 import time
 import random
+pygame.init()
 
+carindex = 0
 
 lanelinks = {
     "A" : [["E"],[0,333]], #  +25 to coordinate to have lane locked into grid 
@@ -54,6 +56,8 @@ class car:
     def __init__(self,speed,start,finish):
         self.angle = 0
 
+        self.numplate = None
+
         self.basespeed = speed
         self.speed = self.basespeed
 
@@ -75,9 +79,13 @@ class car:
         self.getpath(table)     
 
     def draw(self): 
+        font = pygame.font.Font(None,36)
         rotated_img = pygame.transform.rotate(self.car_img, self.angle) 
+        numplate = font.render(str(self.numplate),True,(255,255,255))
+        t_rect = numplate.get_rect(center=(self.x, self.y))
         rect = rotated_img.get_rect(center=(self.x, self.y)) 
         screen.blit(rotated_img, rect)
+        screen.blit(numplate,t_rect)
 
     def previous_node(self):
         """return the last node traversed by the car"""
@@ -163,7 +171,8 @@ class car:
                     if abs(selfremainingdist-carremainingdist) < min_distance and selfremainingdist > carremainingdist:
                         closecars += 1
                         if self.speed > car.speed:
-                            self.speed -= self.speed/10
+                            self.speed -= self.speed/8
+                        self.speed = round(self.speed,1)
 
                         #print("nearcar1")
 
@@ -187,7 +196,8 @@ class car:
                         if abs(selfremainingtime) > abs(carremainingtime):
                             closecars += 1
                             if self.speed > car.speed:
-                                self.speed -= self.speed/10
+                                self.speed -= self.speed/8
+                            self.speed = round(self.speed,1)
 
                             if self.speed == 0:
                                 print("nearcar2")
@@ -210,7 +220,8 @@ class car:
                     if abs(cartravelleddist) < 75 and abs(selfremainingdist) < 75:
                         closecars += 1
                         if self.speed > car.speed:
-                            self.speed -= self.speed/5
+                            self.speed -= self.speed/8
+                        self.speed = round(self.speed,1)
 
                         if self.speed == 0:
                             print("nearcar3")
@@ -221,15 +232,22 @@ class car:
             if closecars == 0:
                 if self.speed < self.basespeed:
                     self.speed += (self.basespeed-self.speed)/10
+
+                self.speed = round(self.speed,1)
                     
+        if self.speed < 1:
+            self.speed = 0
+
     def nearlight(self,lights):
         self.lights = lights
-        mindist = 50
+        mindist = 100
         for light in lights:
             if light.state in (2,3):
                 if math.hypot((light.x-self.x),(light.y-self.y)) < mindist and self.angle == light.angle:
                     #print("im a light at",self.x,self.y,", someone is near me", )
-                    self.speed = 0
+                    self.speed -= self.basespeed/10
+                    if self.speed < 1:
+                        self.speed = 0
                     return True
 
 
@@ -375,27 +393,42 @@ def dykstras(firstnode,nodes):
 
 nodes = dykstras_nodes_create()
 
+def empty_enterances():
+    empty = True
+    emptynum = len(lanelinksexits)
+    for c in cars:
+        for enterance in lanelinksexits:
+            if math.hypot(c.x-lanelinks[enterance][1][0],c.y-lanelinks[enterance][1][1]) < 50:
+                emptynum -= 1
 
+    if emptynum == 0:
+        empty = False
+    return empty
 
 def spawn_car():
+    global carindex
     while True:
-        randpathloop = True
-        while randpathloop == True:
+        if empty_enterances() == True:
+            randpathloop = True
+            while randpathloop == True:
 
-            rand1 = random.choice(lanelinksexits)
-            rand2 = random.choice(lanelinksexits)
+                rand1 = random.choice(lanelinksexits)
+                rand2 = random.choice(lanelinksexits)
 
-            occupied = False
-            for c in cars:
-                if math.hypot(c.x-lanelinks[rand1][1][0],c.y-lanelinks[rand1][1][1]) < 50:
-                    occupied = True
-                    break       
+                occupied = False
+                for c in cars:
+                    if math.hypot(c.x-lanelinks[rand1][1][0],c.y-lanelinks[rand1][1][1]) < 50:
+                        occupied = True
+                        break       
 
-            if not occupied and rand1 != rand2:
-                randpathloop = False
+                if not occupied and rand1 != rand2:
+                    randpathloop = False
 
-        carobj = car(random.randint(100,200),rand1,rand2)
-        cars.append(carobj)
+            carobj = car(random.randint(100,200),rand1,rand2)
+            carobj.numplate = carindex
+            cars.append(carobj)
+            carindex += 1
+
         time.sleep(60/60)
 
 
@@ -413,7 +446,7 @@ def main():
 
     clock = pygame.time.Clock()
     fps = 30
-        
+    
 
     #cars.append(car3)
     
@@ -492,6 +525,8 @@ def main():
         for c in cars.copy():
             moving = c.move(dt)
             c.draw()
+            if c.numplate == 15:
+                print("")
             #c.nearnode()
             if not moving:
                 cars.remove(c)
