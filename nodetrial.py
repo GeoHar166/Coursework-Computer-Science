@@ -50,9 +50,12 @@ screen = pygame.display.set_mode((width,height))    #make screen for display
 cars = []
 lights = []
 
+carpngs = ["car.png","newcar.png","orangecar.png"]
+
+
 
 #pygame.Rect.collidepoint() !!!!!!!!
-class car:
+class vehicle:
     def __init__(self,speed,start,finish):
         self.angle = 0
 
@@ -71,9 +74,6 @@ class car:
         self.x,self.y = self.startx,self.starty
 
         self.target = 1
-
-        self.car_img = pygame.image.load("car.png")
-        self.car_img = pygame.transform.scale(self.car_img,(70,40))  
 
         table = dykstras(self.start,nodes)
         self.getpath(table)     
@@ -150,7 +150,6 @@ class car:
 
     def nearcar(self,cars):
         closecars = 0
-        min_distance = 80
         max_check_distance = 250
         if self.paused == False:
             for car in cars:
@@ -169,7 +168,7 @@ class car:
                     selfremainingdist = self.dist_to_targetnode()
 
                     
-                    if abs(selfremainingdist-carremainingdist) < min_distance and selfremainingdist > carremainingdist:
+                    if abs(selfremainingdist-carremainingdist) < self.min_distance and selfremainingdist > carremainingdist:
                         closecars += 1
                         if self.speed > car.speed:
                             self.speed -= self.speed/6
@@ -204,7 +203,7 @@ class car:
                             #     print("nearcar2")
                     
                     else:
-                        if self.dist_to_targetnode() + car.dist_to_targetnode() < min_distance:
+                        if self.dist_to_targetnode() + car.dist_to_targetnode() < self.min_distance:
                             if self.dist_to_targetnode() < car.dist_to_targetnode() and car.nearlight(self.lights) == False:
                                 closecars += 1
 
@@ -241,10 +240,9 @@ class car:
 
     def nearlight(self,lights):
         self.lights = lights
-        mindist = 80
         for light in lights:
             if light.state in (2,3):
-                if math.hypot((light.x-self.x),(light.y-self.y)) < mindist and self.angle == light.angle:
+                if math.hypot((light.x-self.x),(light.y-self.y)) < self.min_distance and self.angle == light.angle:
                     if (self.angle == 0 and self.x > light.x) or (self.angle == -180 and self.x < light.x) or (self.angle == 90 and self.y < light.y) or (self.angle == -90 and self.y > light.y):
                         pass
                     else:
@@ -253,6 +251,23 @@ class car:
                         if self.speed < 1:
                             self.speed = 0
                         return True
+
+class car(vehicle):
+    def __init__(self,speed,start,finish):
+        self.vehicle = "car"
+        self.car_img = pygame.image.load(random.choice(carpngs))
+        self.car_img = pygame.transform.scale(self.car_img,(70,40))  
+        self.min_distance = 80
+        super().__init__(speed,start,finish)
+
+class lorry(vehicle):
+    def __init__(self,speed,start,finish):
+        self.vehicle = "lorry"
+        self.car_img = pygame.image.load("lorry.png")
+        self.car_img = pygame.transform.scale(self.car_img,(140,50))
+        self.min_distance = 90
+        super().__init__(speed,start,finish)
+
 
 
 class lane:
@@ -428,9 +443,13 @@ def spawn_car():
                 if not occupied and rand1 != rand2:
                     randpathloop = False
 
-            carobj = car(random.randint(100,200),rand1,rand2)
+            if random.randint(0,3) == 0:
+                carobj = lorry(random.randint(75,150),rand1,rand2)
+            else:
+                carobj = car(random.randint(100,200),rand1,rand2)
+
             carobj.numplate = carindex
-            cars.append(carobj)
+            cars.append(carobj)         # number on car for debugging
             carindex += 1
 
         time.sleep(60/60)
@@ -544,12 +563,17 @@ def main():
 main()
 pygame.quit()
 
-# traffic lights go right way                                   # done
-# multiple traffic lights                                       # done
-# random path                                                   # done
-# maybe overlapping objects in order to "stresst" stress test   # done
+# traffic lights go right way                                                       # done
+# multiple traffic lights                                                           # done
+# random path                                                                       # done
+# maybe overlapping objects in order to "stresst" stress test                       # done
 
-# error at entry nodes stopping                                 # done
-# error at crossing nodes traffic                               # done
+# error at entry nodes stopping                                                     # done
+# error at crossing nodes traffic                                                   # done
 
-# cars shouldnt stop at traffic lights if they are already past the traffic light (use the angle to help)
+# cars shouldnt stop at traffic lights if they are already past the traffic light   # done
+
+# new vehicles (lorry,motorbike,bus):
+#       if nearcar car is a lorry, mindist is larger (because larger img)
+
+# new roads (curved, T-junction)
