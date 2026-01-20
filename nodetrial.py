@@ -134,7 +134,7 @@ class car:
                 self.x += xchangeperunitlength * distance
                 self.y += ychangeperunitlength * distance
 
-                angle_rad = math.atan2(xchangeperunitlength,ychangeperunitlength)       # 0 is right, 180 left, 90 up, -90 down
+                angle_rad = math.atan2(xchangeperunitlength,ychangeperunitlength)       # 0 is right, 180/-180 left, 90 up, -90 down
                 self.angle = math.degrees(angle_rad) - 90       #updated angle algorithm  
                 distance = 0
                                 
@@ -150,7 +150,7 @@ class car:
 
     def nearcar(self,cars):
         closecars = 0
-        min_distance = 100
+        min_distance = 80
         max_check_distance = 250
         if self.paused == False:
             for car in cars:
@@ -168,10 +168,11 @@ class car:
                     carremainingdist = car.dist_to_targetnode()
                     selfremainingdist = self.dist_to_targetnode()
 
+                    
                     if abs(selfremainingdist-carremainingdist) < min_distance and selfremainingdist > carremainingdist:
                         closecars += 1
                         if self.speed > car.speed:
-                            self.speed -= self.speed/8
+                            self.speed -= self.speed/6
                         self.speed = round(self.speed,1)
 
                         #print("nearcar1")
@@ -188,7 +189,7 @@ class car:
                     # different source, same destination
                     # determine distance away from node (for self and car) if too close, furthest slows down
 
-                    if self.speed != 0 and car.speed != 0:
+                    if self.speed != 0 and car.speed != 0 and car.nearlight(lights) == False:
                         
                         carremainingtime = car.dist_to_targetnode()/car.speed
                         selfremainingtime = self.dist_to_targetnode()/self.speed
@@ -196,11 +197,11 @@ class car:
                         if abs(selfremainingtime) > abs(carremainingtime):
                             closecars += 1
                             if self.speed > car.speed:
-                                self.speed -= self.speed/8
+                                self.speed -= self.speed/6
                             self.speed = round(self.speed,1)
 
-                            if self.speed == 0:
-                                print("nearcar2")
+                            # if self.speed == 0:
+                            #     print("nearcar2")
                     
                     else:
                         if self.dist_to_targetnode() + car.dist_to_targetnode() < min_distance:
@@ -220,11 +221,11 @@ class car:
                     if abs(cartravelleddist) < 75 and abs(selfremainingdist) < 75:
                         closecars += 1
                         if self.speed > car.speed:
-                            self.speed -= self.speed/8
+                            self.speed -= self.speed/6
                         self.speed = round(self.speed,1)
 
-                        if self.speed == 0:
-                            print("nearcar3")
+                        # if self.speed == 0:
+                        #     print("nearcar3")
             
                 """# elif car.target_node() == self.previous_node():
                 #     # does not matter as it is car's responsibility to slow down"""
@@ -240,15 +241,18 @@ class car:
 
     def nearlight(self,lights):
         self.lights = lights
-        mindist = 100
+        mindist = 80
         for light in lights:
             if light.state in (2,3):
                 if math.hypot((light.x-self.x),(light.y-self.y)) < mindist and self.angle == light.angle:
-                    #print("im a light at",self.x,self.y,", someone is near me", )
-                    self.speed -= self.basespeed/10
-                    if self.speed < 1:
-                        self.speed = 0
-                    return True
+                    if (self.angle == 0 and self.x > light.x) or (self.angle == -180 and self.x < light.x) or (self.angle == 90 and self.y < light.y) or (self.angle == -90 and self.y > light.y):
+                        pass
+                    else:
+                        #print("im a light at",self.x,self.y,", someone is near me", )
+                        self.speed -= self.basespeed/10
+                        if self.speed < 1:
+                            self.speed = 0
+                        return True
 
 
 class lane:
@@ -525,8 +529,6 @@ def main():
         for c in cars.copy():
             moving = c.move(dt)
             c.draw()
-            if c.numplate == 15:
-                print("")
             #c.nearnode()
             if not moving:
                 cars.remove(c)
@@ -547,5 +549,7 @@ pygame.quit()
 # random path                                                   # done
 # maybe overlapping objects in order to "stresst" stress test   # done
 
-# error at entry nodes stopping     # FIX: only do the (first (maybe all)) nearcar check if it is not an enterance (adj nodes > 1) please.. work... !!!
-# error at crossing nodes traffic   #
+# error at entry nodes stopping                                 # done
+# error at crossing nodes traffic                               # done
+
+# cars shouldnt stop at traffic lights if they are already past the traffic light (use the angle to help)
