@@ -8,12 +8,25 @@ pygame.init()
 
 carindex = 0
 
+
+
+
+
+# CD
+#AEFG
+#BHIJ
+# KL
+
+
+
+
+
 lanelinks = {
     "A" : [["E"],[0,333]], #  +25 to coordinate to have lane locked into grid 
     "B" : [["H"],[0,666]],
     "C" : [["E"],[600,0]],
     "D" : [["F"],[1200,0]],
-    "E" : [["A","C","F","H"],[600,333]],
+    "E" : [["A","C","F","H"],[600,333]],    # 600,333 (800,100 for special)
     "F" : [["D","E","G","I"],[1200,333]],
     "G" : [["F"],[1800,333]],
     "H" : [["E","B","I","K"],[600,666]],
@@ -21,8 +34,21 @@ lanelinks = {
     "J" : [["I"],[1800,666]],
     "K" : [["H"],[600,1000]],
     "L" : [["I"],[1200,1000]]
-
 }
+
+# lanelinks = {
+#     "A" : [["J","B","D"],[25,575]], #  +25 to coordinate to have lane locked into grid 
+#     "B" : [["A","C"],[25,25]],
+#     "C" : [["B","D"],[275,25]],
+#     "D" : [["C","E","A"],[275,575]],    
+#     "E" : [["D","F"],[675,575]],        #675
+#     "F" : [["E","G"],[575,25]],
+#     "G" : [["F","H"],[1475,25]],
+#     "H" : [["G","I"],[1075,375]],
+#     "I" : [["H","J"],[1075,875]],
+#     "J" : [["I","A"],[275,875]]
+# }
+
 
 lanelinksexits = []
 for key in lanelinks:
@@ -49,6 +75,7 @@ screen = pygame.display.set_mode((width,height))    #make screen for display
 
 cars = []
 lights = []
+traffic_lights = {}
 
 carpngs = ["car.png","newcar.png","orangecar.png"]
 
@@ -80,7 +107,7 @@ class vehicle:
 
     def draw(self): 
         font = pygame.font.Font(None,36)
-        rotated_img = pygame.transform.rotate(self.car_img, self.angle) 
+        rotated_img = pygame.transform.rotate(self.car_img, self.angle) #self.angle
         numplate = font.render(str(self.numplate),True,(255,255,255))
         t_rect = numplate.get_rect(center=(self.x, self.y))
         rect = rotated_img.get_rect(center=(self.x, self.y)) 
@@ -156,6 +183,13 @@ class vehicle:
                 if car is self: #dont compare to itself
                     continue
 
+                if car.vehicle == "lorry":
+                    min_distance = self.min_distance + 10
+                elif car.vehicle == "car":
+                    min_distance = self.min_distance
+                elif car.vehicle == "motorbike":
+                    min_distance = self.min_distance
+
                 if math.hypot(car.x - self.x, car.y - self.y) > max_check_distance:
                     continue
 
@@ -168,7 +202,7 @@ class vehicle:
                     selfremainingdist = self.dist_to_targetnode()
 
                     
-                    if abs(selfremainingdist-carremainingdist) < self.min_distance and selfremainingdist > carremainingdist:
+                    if abs(selfremainingdist-carremainingdist) < min_distance and selfremainingdist > carremainingdist:
                         closecars += 1
                         if self.speed > car.speed:
                             self.speed -= self.speed/6
@@ -203,13 +237,10 @@ class vehicle:
                             #     print("nearcar2")
                     
                     else:
-                        if self.dist_to_targetnode() + car.dist_to_targetnode() < self.min_distance:
+                        if self.dist_to_targetnode() + car.dist_to_targetnode() < min_distance:
                             if self.dist_to_targetnode() < car.dist_to_targetnode() and car.nearlight(self.lights) == False:
                                 closecars += 1
-
-
-
-                    
+               
                 elif car.previous_node() == self.target_node() and car.target_node() != self.previous_node():
                     # self desination is car's source
                     # determine self distance to destination and determine distance car has travelled from source
@@ -217,7 +248,7 @@ class vehicle:
                     cartravelleddist = car.dist_from_prevnode()
                     selfremainingdist = self.dist_to_targetnode()
 
-                    if abs(cartravelleddist) < 75 and abs(selfremainingdist) < 75:
+                    if abs(cartravelleddist) < min_distance and abs(selfremainingdist) < min_distance:
                         closecars += 1
                         if self.speed > car.speed:
                             self.speed -= self.speed/6
@@ -241,7 +272,7 @@ class vehicle:
     def nearlight(self,lights):
         self.lights = lights
         for light in lights:
-            if light.state in (2,3):
+            if light.state != 2:
                 if math.hypot((light.x-self.x),(light.y-self.y)) < self.min_distance and self.angle == light.angle:
                     if (self.angle == 0 and self.x > light.x) or (self.angle == -180 and self.x < light.x) or (self.angle == 90 and self.y < light.y) or (self.angle == -90 and self.y > light.y):
                         pass
@@ -268,13 +299,21 @@ class lorry(vehicle):
         self.min_distance = 90
         super().__init__(speed,start,finish)
 
+class motorbike(vehicle):
+    def __init__(self,speed,start,finish):
+        self.vehicle = "motorbike"
+        self.car_img = pygame.image.load("motorbike.png")
+        self.car_img = pygame.transform.scale(self.car_img,(60,40))
+        self.min_distance = 60
+        super().__init__(speed,start,finish)
+    
 
 
 class lane:
     def __init__(self):
         pass
 
-class trafficlights:
+class trafficlight:
     def __init__(self,x,y,angle):
         self.x = x
         self.y = y
@@ -286,24 +325,14 @@ class trafficlights:
         self.lightlengths = [3.0,0.5,3.0,0.8]
         self.angle = angle
 
-    def changecolour(self,dt):       
+        # print("x:",self.x,"     y:",self.y,"    degangle:",self.angle,"     radangle",math.radians(self.angle))
 
-        self.timer += dt
-        if self.timer >= self.lightlengths[self.state]:
-            self.timer = 0.0
-            self.state = (self.state+1)%4
+    def changecolour(self,numlights):
+        self.state = (self.state+1)%4 # %4 because 4 states
 
-            if self.state == 0:
-                self.light_img = pygame.image.load("trafficlightG.png")
-            elif self.state == 1:
-                self.light_img = pygame.image.load("trafficlightY.png")    
-            elif self.state == 2:
-                self.light_img = pygame.image.load("trafficlightR.png")  
-            elif self.state == 3:
-                self.light_img = pygame.image.load("trafficlightRY.png")  
-            self.light_img = pygame.transform.scale(self.light_img,(13,35)) 
-            self.rectlight = self.light_img.get_rect(center=(self.x,self.y))
+        self.draw()
 
+    """
     def changebyclick(self):
         self.state = (self.state+2)%4
         if self.state == 0:
@@ -316,24 +345,48 @@ class trafficlights:
             self.light_img = pygame.image.load("trafficlightRY.png")  
         self.light_img = pygame.transform.scale(self.light_img,(13,35)) 
         self.rectlight = self.light_img.get_rect(center=(self.x,self.y))
+    """
 
     def draw(self):
         if self.state == 0:
-            self.light_img = pygame.image.load("trafficlightG.png")
+            self.light_img = pygame.image.load("trafficlightR.png")
         elif self.state == 1:
-            self.light_img = pygame.image.load("trafficlightY.png")    
+            self.light_img = pygame.image.load("trafficlightRY.png")
         elif self.state == 2:
-            self.light_img = pygame.image.load("trafficlightR.png")  
+            self.light_img = pygame.image.load("trafficlightG.png")  
         elif self.state == 3:
-            self.light_img = pygame.image.load("trafficlightRY.png")  
+            self.light_img = pygame.image.load("trafficlightY.png")  
+            
         self.light_img = pygame.transform.scale(self.light_img,(13,35)) 
-        self.rectlight = self.light_img.get_rect(center=(self.x,self.y))
-        screen.blit(self.light_img,self.rectlight)
-        
+        rotated_img = pygame.transform.rotate(self.light_img, self.angle-90) 
+        rect = rotated_img.get_rect(center=(self.x, self.y)) 
+        screen.blit(rotated_img, rect)
+    
+        # self.light_img = pygame.transform.scale(self.light_img,(13,35)) 
+        # self.rectlight = self.light_img.get_rect(center=(self.x,self.y))
+        # screen.blit(self.light_img,self.rectlight)      
+            
 
 def lanedraw(screen,start,end):
         #pygame.draw.line(screen,colour,(x,y),(x,y),width)
         pygame.draw.line(screen,(150,150,150),start,end,50)     #change so width is 100 when 2 way road
+
+def lightatnode_init(node):
+    traffic_lights[node] = []
+
+    traffic_lights[node].append(trafficlight((lanelinks[node][1][0]-67.5),(lanelinks[node][1][1]-31.5), 0))        #nw
+    traffic_lights[node].append(trafficlight((lanelinks[node][1][0]+31.5),(lanelinks[node][1][1])-67.5, -90))         #ne
+    traffic_lights[node].append(trafficlight((lanelinks[node][1][0]+67.5),(lanelinks[node][1][1])+31.5, -180))       #se
+    traffic_lights[node].append(trafficlight((lanelinks[node][1][0]-31.5),(lanelinks[node][1][1]+67.5), 90))      #sw
+
+    traffic_lights[node][0].state = 2
+
+    for light in traffic_lights[node]:
+        lights.append(light)
+
+def lightatnode_change(node,rotationnum):
+    traffic_lights[node][rotationnum].changecolour(len(traffic_lights[node]))
+
 
 
 #GLOBAL DYKSTRA FUNCTIONS:
@@ -443,8 +496,11 @@ def spawn_car():
                 if not occupied and rand1 != rand2:
                     randpathloop = False
 
-            if random.randint(0,3) == 0:
+            choose_vehicle = random.randint(0,4)
+            if choose_vehicle == 0:
                 carobj = lorry(random.randint(75,150),rand1,rand2)
+            elif choose_vehicle == 1:
+                carobj = motorbike(random.randint(150,225),rand1,rand2)
             else:
                 carobj = car(random.randint(100,200),rand1,rand2)
 
@@ -454,10 +510,10 @@ def spawn_car():
 
         time.sleep(60/60)
 
-
 def run_threaded(function):
     thread = threading.Thread(target=function)
     thread.start()
+
 
 
 def main():    
@@ -476,18 +532,19 @@ def main():
     run_threaded(spawn_car)
 
     # node @ 600, 333
-
-    trafficlighttest = trafficlights(600-60,333-42.5,0)   #NW
-    trafficlight2 = trafficlights(600+32.5,333-67.5,-90)    #NE
-    trafficlight3 = trafficlights(600+60,333+42.5,-180)      #SE
-    trafficlight4 = trafficlights(600-32.5,333+67.5,90)    #SW
-
-
+    """
+    trafficlighttest = trafficlight(600-60,333-42.5,0)   #NW
+    trafficlight2 = trafficlight(600+32.5,333-67.5,-90)    #NE
+    trafficlight3 = trafficlight(600+60,333+42.5,-180)      #SE
+    trafficlight4 = trafficlight(600-32.5,333+67.5,90)    #SW
+    """
+    """
     lights.append(trafficlighttest)
     lights.append(trafficlight2)
     lights.append(trafficlight3)
     lights.append(trafficlight4)
-    
+    """
+    """
     lights[1].state += 2
     lights[2].state += 2    #clicklightquad() only
     lights[3].state += 2
@@ -496,11 +553,28 @@ def main():
     lights[1].draw()
     lights[2].draw()  #clicklightquad() only
     lights[3].draw()
+    """
 
+    lightatnode_init("E")
 
     last = time.time()
 
-    clicklightquadrepeats = 0
+    # light1rotationnum = 0
+    # light2rotationnum = 0
+
+    # lightred_change_time = 0
+    # lightyellow_change_time = 0
+    # lightgreen_change_time = 0
+    # lightredyellow_change_time = 0
+
+    light_change_time = 0
+
+    lightindex = 0
+    phase = 0
+
+    greentime = 5.0
+    yellowtime = 1.0
+
 
     while running:
         
@@ -510,9 +584,12 @@ def main():
                 running = False
                 print("Please kill the Terminal")
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                lights[clicklightquadrepeats].changebyclick()
-                lights[(clicklightquadrepeats+1)%4].changebyclick()
-                clicklightquadrepeats = (clicklightquadrepeats+1)%4
+
+                lightatnode_change("E",dt)
+
+                print("rotaion num",lightrotationnum)
+
+                lightrotationnum = (lightrotationnum+1)%len(traffic_lights["E"])
 
 
         dt = clock.tick(fps)/1000   # milliseconds
@@ -521,7 +598,12 @@ def main():
             print(dt, now - last)
         last = now
 
+        # lightred_change_time += dt
+        # lightyellow_change_time += dt
+        # lightgreen_change_time += dt
+        # lightredyellow_change_time += dt
 
+        light_change_time += dt
 
 
 
@@ -535,10 +617,60 @@ def main():
             for i in lanelinks[node][0]:
                 lanedraw(screen,lanelinks[node][1],lanelinks[i][1]) 
             
-        #trafficlighttest.changecolour(dt)
-        for trafficlight in lights:
-            trafficlight.draw()
 
+#TRAFFIC LIGHT STUFF
+
+        # if lightred_change_time >= 5:  #can be changed for longer green light
+        #     lightred_change_time = 0
+        #     lightatnode_change("E",light1rotationnum)
+
+        # if lightyellow_change_time >= 6:
+        #     lightyellow_change_time = 0
+        #     lightatnode_change("E",light1rotationnum)
+        #     light1rotationnum = (light1rotationnum+1)%len(traffic_lights["E"]) 
+        #     lightred_change_time = 4
+        #     lightyellow_change_time = 4
+
+        # if lightgreen_change_time >= 11:
+        #     lightgreen_change_time = 0
+        #     lightatnode_change("E",light2rotationnum)
+
+        # if lightredyellow_change_time >= 12:
+        #     lightyellow_change_time = 0
+        #     lightatnode_change("E",light2rotationnum)
+        #     light2rotationnum = (light2rotationnum+1)%len(traffic_lights["E"]) 
+        #     lightgreen_change_time = 10
+        #     lightredyellow_change_time = 10
+
+# A B C D
+# A turns RY, B turns Y
+# A turns R, B turns G
+# B turns RY, C turns Y
+# B turns R, C turns G
+# C turns RY etc
+
+        currentlight = lightindex
+        nextlight = (lightindex+1)%len(traffic_lights["E"])
+        
+        if phase == 0:
+            if light_change_time >= greentime:
+                traffic_lights["E"][currentlight].state = 1
+                traffic_lights["E"][nextlight].state = 3
+                phase = 1
+                light_change_time = 0
+
+        elif phase == 1:
+            if light_change_time >= yellowtime:
+                traffic_lights["E"][currentlight].state = 0
+                traffic_lights["E"][nextlight].state = 2
+                lightindex = nextlight
+                phase = 0
+                light_change_time = 0
+
+
+        for lightkey in traffic_lights.keys():
+            for light in traffic_lights[lightkey]:
+                light.draw()
 
 #OTHER STUFF  
         for c in cars:
@@ -551,8 +683,6 @@ def main():
             #c.nearnode()
             if not moving:
                 cars.remove(c)
-            
-
             
 
         #time_delta = clock.tick(fps)/1000.0 #ui clock
@@ -573,7 +703,20 @@ pygame.quit()
 
 # cars shouldnt stop at traffic lights if they are already past the traffic light   # done
 
-# new vehicles (lorry,motorbike,bus):
-#       if nearcar car is a lorry, mindist is larger (because larger img)
+# new vehicles (lorry,motorbike,bus):                                               
+#       if nearcar car is a lorry, mindist is larger (because larger img)           # done
 
 # new roads (curved, T-junction)
+
+# add UI
+# add statistics in UI
+
+# change speed limits:
+#       select a road, option menu pops up
+
+# add tools to change traffic light timings:
+#       select a node, option menu pops up
+
+# more vehicles (motorbike?,bus?)
+
+# traffic lights can be on diagonal roads ~~> Tx = 74.5sin(25-arctan((x1-x2)/y1-y2))),  Ty = 74.5cos(25-arctan((x1-x2)/y1-y2)))
