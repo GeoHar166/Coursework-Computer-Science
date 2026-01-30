@@ -177,7 +177,6 @@ class vehicle:
 
     def nearcar(self,cars):
         closecars = 0
-        max_check_distance = 250
         if self.paused == False:
             for car in cars:
                 if car is self: #dont compare to itself
@@ -189,9 +188,6 @@ class vehicle:
                     min_distance = self.min_distance
                 elif car.vehicle == "motorbike":
                     min_distance = self.min_distance
-
-                if math.hypot(car.x - self.x, car.y - self.y) > max_check_distance:
-                    continue
 
                 if car.previous_node() == self.previous_node() and car.target_node() == self.target_node():
                     # same source and destination
@@ -273,15 +269,18 @@ class vehicle:
         self.lights = lights
         for light in lights:
             if light.state != 2:
-                if math.hypot((light.x-self.x),(light.y-self.y)) < self.min_distance and self.angle == light.angle:
-                    if (self.angle == 0 and self.x > light.x) or (self.angle == -180 and self.x < light.x) or (self.angle == 90 and self.y < light.y) or (self.angle == -90 and self.y > light.y):
-                        pass
-                    else:
-                        #print("im a light at",self.x,self.y,", someone is near me", )
-                        self.speed -= self.basespeed/10
+                if (self.angle == 0 and self.x > light.x) or (self.angle == -180 and self.x < light.x) or (self.angle == 90 and self.y < light.y) or (self.angle == -90 and self.y > light.y):
+                    pass
+                else:
+                    if math.hypot((light.x-self.x),(light.y-self.y)) < self.min_distance and self.angle == light.angle:
+                        if math.hypot((light.x-self.x),(light.y-self.y)) < self.min_distance/4:
+                            self.speed -= self.basespeed/2
+                        else:
+                            self.speed -= self.basespeed/10
                         if self.speed < 1:
                             self.speed = 0
                         return True
+
 
 class car(vehicle):
     def __init__(self,speed,start,finish):
@@ -296,7 +295,7 @@ class lorry(vehicle):
         self.vehicle = "lorry"
         self.car_img = pygame.image.load("lorry.png")
         self.car_img = pygame.transform.scale(self.car_img,(140,50))
-        self.min_distance = 90
+        self.min_distance = 110
         super().__init__(speed,start,finish)
 
 class motorbike(vehicle):
@@ -304,7 +303,7 @@ class motorbike(vehicle):
         self.vehicle = "motorbike"
         self.car_img = pygame.image.load("motorbike.png")
         self.car_img = pygame.transform.scale(self.car_img,(60,40))
-        self.min_distance = 60
+        self.min_distance = 80
         super().__init__(speed,start,finish)
     
 
@@ -470,7 +469,7 @@ def empty_enterances():
     emptynum = len(lanelinksexits)
     for c in cars:
         for enterance in lanelinksexits:
-            if math.hypot(c.x-lanelinks[enterance][1][0],c.y-lanelinks[enterance][1][1]) < 50:
+            if math.hypot(c.x-lanelinks[enterance][1][0],c.y-lanelinks[enterance][1][1]) < 100:
                 emptynum -= 1
 
     if emptynum == 0:
