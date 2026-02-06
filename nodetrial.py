@@ -4,6 +4,7 @@ import pygame_gui
 import threading
 import time
 import random
+import py_singl_slider
 pygame.init()
 
 carindex = 0
@@ -78,6 +79,8 @@ lights = []
 traffic_lights = {}
 
 carpngs = ["car.png","newcar.png","orangecar.png"]
+
+vehicles_per_second = [2.0,1.0,0.5,0.5,0]    #   master,cars,lorrys,motorbikes
 
 
 
@@ -197,14 +200,19 @@ class vehicle:
                     carremainingdist = car.dist_to_targetnode()
                     selfremainingdist = self.dist_to_targetnode()
 
-                    
-                    if abs(selfremainingdist-carremainingdist) < min_distance and selfremainingdist > carremainingdist:
+                    if abs(selfremainingdist-carremainingdist) < (min_distance-(min_distance/4)) and selfremainingdist > carremainingdist:
+                        closecars += 1
+                        if self.speed > car.speed:
+                            self.speed -= self.speed/2
+                            """
+                        self.speed = round(self.speed,1)"""
+
+                    elif abs(selfremainingdist-carremainingdist) < min_distance and selfremainingdist > carremainingdist:
                         closecars += 1
                         if self.speed > car.speed:
                             self.speed -= self.speed/6
-                        self.speed = round(self.speed,1)
-
-                        #print("nearcar1")
+                            """
+                        self.speed = round(self.speed,1)"""
 
                     """ # elif car.previous_node() == self.previous_node(): 
                 #     # same source, different destination
@@ -228,9 +236,6 @@ class vehicle:
                             if self.speed > car.speed:
                                 self.speed -= self.speed/6
                             self.speed = round(self.speed,1)
-
-                            # if self.speed == 0:
-                            #     print("nearcar2")
                     
                     else:
                         if self.dist_to_targetnode() + car.dist_to_targetnode() < min_distance:
@@ -249,9 +254,6 @@ class vehicle:
                         if self.speed > car.speed:
                             self.speed -= self.speed/6
                         self.speed = round(self.speed,1)
-
-                        # if self.speed == 0:
-                        #     print("nearcar3")
             
                 """# elif car.target_node() == self.previous_node():
                 #     # does not matter as it is car's responsibility to slow down"""
@@ -306,11 +308,6 @@ class motorbike(vehicle):
         self.min_distance = 80
         super().__init__(speed,start,finish)
     
-
-
-class lane:
-    def __init__(self):
-        pass
 
 class trafficlight:
     def __init__(self,x,y,angle):
@@ -478,7 +475,16 @@ def empty_enterances():
 
 def spawn_car():
     global carindex
+    
+
     while True:
+
+        vehicles_spawn = round(vehicles_per_second[0])
+        cars_spawn = round(vehicles_per_second[1])
+        lorrys_spawn = round(vehicles_per_second[2])
+        motorbikes_spawn = round(vehicles_per_second[3])
+        total = round(vehicles_per_second[4])
+
         if empty_enterances() == True:
             randpathloop = True
             while randpathloop == True:
@@ -495,19 +501,20 @@ def spawn_car():
                 if not occupied and rand1 != rand2:
                     randpathloop = False
 
-            choose_vehicle = random.randint(0,4)
-            if choose_vehicle == 0:
-                carobj = lorry(random.randint(75,150),rand1,rand2)
-            elif choose_vehicle == 1:
-                carobj = motorbike(random.randint(150,225),rand1,rand2)
-            else:
-                carobj = car(random.randint(100,200),rand1,rand2)
+            choose_vehicle = random.randint(0,total)
+                # choose random vehicle (most likely a car)
+            if choose_vehicle <= cars_spawn:
+                carobj = car(random.randint(125,175),rand1,rand2)
+            elif choose_vehicle <= cars_spawn + lorrys_spawn:
+                carobj = lorry(random.randint(100,150),rand1,rand2)
+            elif choose_vehicle <= cars_spawn + lorrys_spawn + motorbikes_spawn:
+                carobj = motorbike(random.randint(150,200),rand1,rand2)
 
             carobj.numplate = carindex
             cars.append(carobj)         # number on car for debugging
             carindex += 1
 
-        time.sleep(60/60)
+        time.sleep(60/vehicles_spawn)
 
 def run_threaded(function):
     thread = threading.Thread(target=function)
@@ -530,50 +537,40 @@ def main():
     
     run_threaded(spawn_car)
 
-    # node @ 600, 333
-    """
-    trafficlighttest = trafficlight(600-60,333-42.5,0)   #NW
-    trafficlight2 = trafficlight(600+32.5,333-67.5,-90)    #NE
-    trafficlight3 = trafficlight(600+60,333+42.5,-180)      #SE
-    trafficlight4 = trafficlight(600-32.5,333+67.5,90)    #SW
-    """
-    """
-    lights.append(trafficlighttest)
-    lights.append(trafficlight2)
-    lights.append(trafficlight3)
-    lights.append(trafficlight4)
-    """
-    """
-    lights[1].state += 2
-    lights[2].state += 2    #clicklightquad() only
-    lights[3].state += 2
-
-    lights[0].draw()
-    lights[1].draw()
-    lights[2].draw()  #clicklightquad() only
-    lights[3].draw()
-    """
-
+    nodes_with_lights = {}
     lightatnode_init("E")
+    lightatnode_init("F")
+    lightatnode_init("H")
+    lightatnode_init("I")
+
+#   nodes_with_lights[node] = [lightindex,phase,nextlight,greentime,yellowtime,light_change_timer]
+    nodes_with_lights["E"] = [0,0,0,5.0,1.0,0]
+    nodes_with_lights["F"] = [0,0,0,5.0,1.0,0]
+    nodes_with_lights["H"] = [0,0,0,5.0,1.0,0]
+    nodes_with_lights["I"] = [0,0,0,5.0,1.0,0]
+    
 
     last = time.time()
 
-    # light1rotationnum = 0
-    # light2rotationnum = 0
+# stats window
+    vehicle_slidernum = 3   # how many sliders are there (- top slider)
+    sliders = []
+    y_coord = 175   # starting y coordinate for sliders (increases by 75 each iteration)
 
-    # lightred_change_time = 0
-    # lightyellow_change_time = 0
-    # lightgreen_change_time = 0
-    # lightredyellow_change_time = 0
+    sliders.append([py_singl_slider.PySinglSlider(x=1485,y=y_coord,min_value=2.0,max_value=100.0,initial_value=60.0),y_coord])
+    
+    for i in range(vehicle_slidernum):
+        y_coord += 75
+        sliders.append([py_singl_slider.PySinglSlider(x=1485,y=y_coord,min_value=2.0,max_value=100.0,initial_value=20.0),y_coord])
+        
 
-    light_change_time = 0
-
-    lightindex = 0
-    phase = 0
-
-    greentime = 5.0
-    yellowtime = 1.0
-
+        """
+    slider1 = py_singl_slider.PySinglSlider(x=1475,y=100,min_value=0,max_value=100,initial_value=20)
+    slider2 = py_singl_slider.PySinglSlider(x=1475,y=150,min_value=0,max_value=100,initial_value=20)
+    slider3 = py_singl_slider.PySinglSlider(x=1475,y=200,min_value=0,max_value=100,initial_value=20)
+    slider4 = py_singl_slider.PySinglSlider(x=1475,y=250,min_value=0,max_value=100,initial_value=20)
+    slider5 = py_singl_slider.PySinglSlider(x=1475,y=300,min_value=0,max_value=100,initial_value=20)
+    """
 
     while running:
         
@@ -582,14 +579,9 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
                 print("Please kill the Terminal")
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-
-                lightatnode_change("E",dt)
-
-                print("rotaion num",lightrotationnum)
-
-                lightrotationnum = (lightrotationnum+1)%len(traffic_lights["E"])
-
+            # if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:    # if user clicks the screen
+            for slider in sliders:
+                slider[0].listen_event(event)
 
         dt = clock.tick(fps)/1000   # milliseconds
         now = time.time()
@@ -597,49 +589,20 @@ def main():
             print(dt, now - last)
         last = now
 
-        # lightred_change_time += dt
-        # lightyellow_change_time += dt
-        # lightgreen_change_time += dt
-        # lightredyellow_change_time += dt
-
-        light_change_time += dt
+        
 
 
 
 #DRAW HERE FOR CHANGING THINGS
 
 
-        
-
         screen.fill(green) #clear screen so no repeated "draws"
         for node in lanelinks:
             for i in lanelinks[node][0]:
-                lanedraw(screen,lanelinks[node][1],lanelinks[i][1]) 
+                lanedraw(screen,lanelinks[node][1],lanelinks[i][1])
             
 
 #TRAFFIC LIGHT STUFF
-
-        # if lightred_change_time >= 5:  #can be changed for longer green light
-        #     lightred_change_time = 0
-        #     lightatnode_change("E",light1rotationnum)
-
-        # if lightyellow_change_time >= 6:
-        #     lightyellow_change_time = 0
-        #     lightatnode_change("E",light1rotationnum)
-        #     light1rotationnum = (light1rotationnum+1)%len(traffic_lights["E"]) 
-        #     lightred_change_time = 4
-        #     lightyellow_change_time = 4
-
-        # if lightgreen_change_time >= 11:
-        #     lightgreen_change_time = 0
-        #     lightatnode_change("E",light2rotationnum)
-
-        # if lightredyellow_change_time >= 12:
-        #     lightyellow_change_time = 0
-        #     lightatnode_change("E",light2rotationnum)
-        #     light2rotationnum = (light2rotationnum+1)%len(traffic_lights["E"]) 
-        #     lightgreen_change_time = 10
-        #     lightredyellow_change_time = 10
 
 # A B C D
 # A turns RY, B turns Y
@@ -648,23 +611,29 @@ def main():
 # B turns R, C turns G
 # C turns RY etc
 
-        currentlight = lightindex
-        nextlight = (lightindex+1)%len(traffic_lights["E"])
-        
-        if phase == 0:
-            if light_change_time >= greentime:
-                traffic_lights["E"][currentlight].state = 1
-                traffic_lights["E"][nextlight].state = 3
-                phase = 1
-                light_change_time = 0
+        for node in nodes_with_lights:
 
-        elif phase == 1:
-            if light_change_time >= yellowtime:
-                traffic_lights["E"][currentlight].state = 0
-                traffic_lights["E"][nextlight].state = 2
-                lightindex = nextlight
-                phase = 0
-                light_change_time = 0
+            nodes_with_lights[node][5] += dt
+
+            currentlight = nodes_with_lights[node][0]
+            nodes_with_lights[node][2] = (nodes_with_lights[node][0]+1)%len(traffic_lights[node])
+        #   nextlight =                 #(lightindex)+1 %...
+            
+            if nodes_with_lights[node][1] == 0:
+                if nodes_with_lights[node][5] >= nodes_with_lights[node][3]:
+                                    #>= greentime
+                    traffic_lights[node][currentlight].state = 1
+                    traffic_lights[node][nodes_with_lights[node][2]].state = 3
+                    nodes_with_lights[node][1] = 1
+                    nodes_with_lights[node][5] = 0
+
+            elif nodes_with_lights[node][1] == 1:
+                if nodes_with_lights[node][5] >= nodes_with_lights[node][4]:
+                    traffic_lights[node][currentlight].state = 0
+                    traffic_lights[node][nodes_with_lights[node][2]].state = 2
+                    nodes_with_lights[node][0] = nodes_with_lights[node][2]
+                    nodes_with_lights[node][1] = 0
+                    nodes_with_lights[node][5] = 0
 
 
         for lightkey in traffic_lights.keys():
@@ -685,6 +654,30 @@ def main():
             
 
         #time_delta = clock.tick(fps)/1000.0 #ui clock
+
+# STATS "WINDOW"
+
+        pygame.draw.rect(screen,grey,(1450,50,300,900))
+
+        for slider in sliders:
+            slider[0].render(screen)
+
+        font = pygame.font.Font(None,25)
+        slidertexts = []
+        slidertexts.append(font.render(f"Vehicles per minute: {sliders[0][0].value:.2f}",True,(0,0,0)))
+        slidertexts.append(font.render(f"Chance for car: {sliders[1][0].value:.2f}",True,(0,0,0)))
+        slidertexts.append(font.render(f"Chance for lorry: {sliders[2][0].value:.2f}",True,(0,0,0)))
+        slidertexts.append(font.render(f"Chance for motorbike: {sliders[3][0].value:.2f}",True,(0,0,0)))
+
+        for slidertext in enumerate(slidertexts):
+            screen.blit(slidertext[1],(1470,sliders[slidertext[0]][1]-20))
+
+        vehicles_per_second[0] = sliders[0][0].value    # master   
+        vehicles_per_second[1] = sliders[1][0].value    # cars
+        vehicles_per_second[2] = sliders[2][0].value    # lorrys
+        vehicles_per_second[3] = sliders[3][0].value    # motorbikes
+        vehicles_per_second[4] = vehicles_per_second[3] + vehicles_per_second[2] + vehicles_per_second[1] + vehicles_per_second[0]
+
 
         pygame.display.update()
 
@@ -716,6 +709,14 @@ pygame.quit()
 # add tools to change traffic light timings:
 #       select a node, option menu pops up
 
-# more vehicles (motorbike?,bus?)
+# more vehicles (bus?)
 
 # traffic lights can be on diagonal roads ~~> Tx = 74.5sin(25-arctan((x1-x2)/y1-y2))),  Ty = 74.5cos(25-arctan((x1-x2)/y1-y2)))
+
+# spawn car at selected enterance
+# block roads
+
+# slider for main "spawning"
+# slider for individual vehicle %
+# slider for traffic light rotation speed
+# toggle for traffic lights on or off
