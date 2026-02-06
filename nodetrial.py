@@ -475,17 +475,24 @@ def empty_enterances():
 
 def spawn_car():
     global carindex
+
+    last_spawn_time = 0
     
 
     while True:
 
-        vehicles_spawn = round(vehicles_per_second[0])
+
+
+        vehicles_spawn = 60/round(vehicles_per_second[0])   #   time needed to wait between each spawn
         cars_spawn = round(vehicles_per_second[1])
         lorrys_spawn = round(vehicles_per_second[2])
         motorbikes_spawn = round(vehicles_per_second[3])
         total = round(vehicles_per_second[4])
 
-        if empty_enterances() == True:
+        now = time.monotonic()
+
+        if empty_enterances() == True and now - last_spawn_time >= vehicles_spawn:
+            last_spawn_time = now
             randpathloop = True
             while randpathloop == True:
 
@@ -514,7 +521,7 @@ def spawn_car():
             cars.append(carobj)         # number on car for debugging
             carindex += 1
 
-        time.sleep(60/vehicles_spawn)
+        time.sleep(0.01)
 
 def run_threaded(function):
     thread = threading.Thread(target=function)
