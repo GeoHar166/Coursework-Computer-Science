@@ -5,6 +5,8 @@ import threading
 import time
 import random
 import py_singl_slider
+
+
 pygame.init()
 
 carindex = 0
@@ -80,7 +82,7 @@ traffic_lights = {}
 
 carpngs = ["car.png","newcar.png","orangecar.png"]
 
-vehicles_per_second = [2.0,1.0,0.5,0.5,0]    #   master,cars,lorrys,motorbikes
+vehicles_per_second = [60,20,20,20,60]    #   master,cars,lorrys,motorbikes
 
 
 
@@ -274,7 +276,7 @@ class vehicle:
                     pass
                 else:
                     if math.hypot((light.x-self.x),(light.y-self.y)) < self.min_distance and self.angle == light.angle:
-                        if math.hypot((light.x-self.x),(light.y-self.y)) < self.min_distance/4:
+                        if math.hypot((light.x-self.x),(light.y-self.y)) < self.min_distance/2:
                             self.speed -= self.basespeed/2
                         else:
                             self.speed -= self.basespeed/10
@@ -322,25 +324,10 @@ class trafficlight:
 
         # print("x:",self.x,"     y:",self.y,"    degangle:",self.angle,"     radangle",math.radians(self.angle))
 
-    def changecolour(self,numlights):
+    def changecolour(self):
         self.state = (self.state+1)%4 # %4 because 4 states
 
         self.draw()
-
-    """
-    def changebyclick(self):
-        self.state = (self.state+2)%4
-        if self.state == 0:
-            self.light_img = pygame.image.load("trafficlightG.png")
-        elif self.state == 1:
-            self.light_img = pygame.image.load("trafficlightY.png")    
-        elif self.state == 2:
-            self.light_img = pygame.image.load("trafficlightR.png")  
-        elif self.state == 3:
-            self.light_img = pygame.image.load("trafficlightRY.png")  
-        self.light_img = pygame.transform.scale(self.light_img,(13,35)) 
-        self.rectlight = self.light_img.get_rect(center=(self.x,self.y))
-    """
 
     def draw(self):
         if self.state == 0:
@@ -360,7 +347,12 @@ class trafficlight:
         # self.light_img = pygame.transform.scale(self.light_img,(13,35)) 
         # self.rectlight = self.light_img.get_rect(center=(self.x,self.y))
         # screen.blit(self.light_img,self.rectlight)      
-            
+
+def button():
+    # button to disable/enable traffic lights
+    # if button is pressed, all lights are green
+    # if button is pressed again, lights return to their previous state and continue to rotate
+    pass
 
 def lanedraw(screen,start,end):
         #pygame.draw.line(screen,colour,(x,y),(x,y),width)
@@ -380,7 +372,13 @@ def lightatnode_init(node):
         lights.append(light)
 
 def lightatnode_change(node,rotationnum):
-    traffic_lights[node][rotationnum].changecolour(len(traffic_lights[node]))
+    traffic_lights[node][rotationnum].changecolour()
+
+def pause(nodes_with_lights):
+    for key in nodes_with_lights.keys():
+        for light in nodes_with_lights[key]:
+            print(light.state)
+
 
 
 
@@ -577,6 +575,16 @@ def main():
     slider4 = py_singl_slider.PySinglSlider(x=1475,y=250,min_value=0,max_value=100,initial_value=20)
     slider5 = py_singl_slider.PySinglSlider(x=1475,y=300,min_value=0,max_value=100,initial_value=20)
     """
+        
+    # traffic light button
+    run_traffic_lights = True
+    light_states_backup = {}
+
+    manager = pygame_gui.UIManager((1800,1000))
+
+    BUTTON_toggle_lights = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((1450,900),(100,50)),
+                                                        text="Toggle Lights",
+                                                        manager=manager)
 
     while running:
         
@@ -585,15 +593,40 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
                 print("Please kill the Terminal")
+
+            if event.type == pygame_gui.UI_BUTTON_PRESSED:
+                if event.ui_element == BUTTON_toggle_lights:
+                    if run_traffic_lights == True:  # if user pauses lights
+                        run_traffic_lights = False
+                        for node in traffic_lights:
+                            light_states_backup[node] = []
+                            for i,light in enumerate(traffic_lights[node]):
+                                light_states_backup[node].append(light.state)
+                                light.state = 2
+                        
+                    else:                           # if user unpauses lights
+                        run_traffic_lights = True
+                        for node in traffic_lights:
+                            for i, light in enumerate(traffic_lights[node]):
+                                light.state = light_states_backup[node][i]
+                        light_states_backup = {}
+
             # if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:    # if user clicks the screen
+
             for slider in sliders:
                 slider[0].listen_event(event)
+
+            manager.process_events(event)
+        
+            
 
         dt = clock.tick(fps)/1000   # milliseconds
         now = time.time()
         if now - last > 1:
             print(dt, now - last)
         last = now
+
+        manager.update(dt)
 
         
 
@@ -617,29 +650,31 @@ def main():
 # B turns R, C turns G
 # C turns RY etc
 
-        for node in nodes_with_lights:
+        if run_traffic_lights == True:      # has the user enabled traffic lights
 
-            nodes_with_lights[node][5] += dt
+            for node in nodes_with_lights:
 
-            currentlight = nodes_with_lights[node][0]
-            nodes_with_lights[node][2] = (nodes_with_lights[node][0]+1)%len(traffic_lights[node])
-        #   nextlight =                 #(lightindex)+1 %...
-            
-            if nodes_with_lights[node][1] == 0:
-                if nodes_with_lights[node][5] >= nodes_with_lights[node][3]:
-                                    #>= greentime
-                    traffic_lights[node][currentlight].state = 1
-                    traffic_lights[node][nodes_with_lights[node][2]].state = 3
-                    nodes_with_lights[node][1] = 1
-                    nodes_with_lights[node][5] = 0
+                nodes_with_lights[node][5] += dt
 
-            elif nodes_with_lights[node][1] == 1:
-                if nodes_with_lights[node][5] >= nodes_with_lights[node][4]:
-                    traffic_lights[node][currentlight].state = 0
-                    traffic_lights[node][nodes_with_lights[node][2]].state = 2
-                    nodes_with_lights[node][0] = nodes_with_lights[node][2]
-                    nodes_with_lights[node][1] = 0
-                    nodes_with_lights[node][5] = 0
+                currentlight = nodes_with_lights[node][0]
+                nodes_with_lights[node][2] = (nodes_with_lights[node][0]+1)%len(traffic_lights[node])
+            #   nextlight =                 #(lightindex)+1 %...
+                
+                if nodes_with_lights[node][1] == 0:
+                    if nodes_with_lights[node][5] >= nodes_with_lights[node][3]:
+                                        #>= greentime
+                        traffic_lights[node][currentlight].state = 1
+                        traffic_lights[node][nodes_with_lights[node][2]].state = 3
+                        nodes_with_lights[node][1] = 1
+                        nodes_with_lights[node][5] = 0
+
+                elif nodes_with_lights[node][1] == 1:
+                    if nodes_with_lights[node][5] >= nodes_with_lights[node][4]:
+                        traffic_lights[node][currentlight].state = 0
+                        traffic_lights[node][nodes_with_lights[node][2]].state = 2
+                        nodes_with_lights[node][0] = nodes_with_lights[node][2]
+                        nodes_with_lights[node][1] = 0
+                        nodes_with_lights[node][5] = 0
 
 
         for lightkey in traffic_lights.keys():
@@ -662,7 +697,7 @@ def main():
         #time_delta = clock.tick(fps)/1000.0 #ui clock
 
 # STATS "WINDOW"
-
+    # SLIDERS
         pygame.draw.rect(screen,grey,(1450,50,300,900))
 
         for slider in sliders:
@@ -683,6 +718,9 @@ def main():
         vehicles_per_second[2] = sliders[2][0].value    # lorrys
         vehicles_per_second[3] = sliders[3][0].value    # motorbikes
         vehicles_per_second[4] = vehicles_per_second[3] + vehicles_per_second[2] + vehicles_per_second[1]
+
+    # LIGHT TOGGLE
+        manager.draw_ui(screen)
 
 
         pygame.display.update()
