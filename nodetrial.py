@@ -200,7 +200,7 @@ class vehicle:
                     carremainingdist = car.dist_to_targetnode()
                     selfremainingdist = self.dist_to_targetnode()
 
-                    if abs(selfremainingdist-carremainingdist) < (min_distance-(min_distance/4)) and selfremainingdist > carremainingdist:
+                    if abs(selfremainingdist-carremainingdist) < (min_distance*0.75) and selfremainingdist > carremainingdist:
                         closecars += 1
                         if self.speed > car.speed:
                             self.speed -= self.speed/2
@@ -211,15 +211,14 @@ class vehicle:
                         closecars += 1
                         if self.speed > car.speed:
                             self.speed -= self.speed/6
-                            """
-                        self.speed = round(self.speed,1)"""
+                            
+                    self.speed = round(self.speed,1)
 
-                    """ # elif car.previous_node() == self.previous_node(): 
+                      # elif car.previous_node() == self.previous_node(): 
                 #     # same source, different destination
                 #     # determine distance along edge for both cars
                 #     # if too close, decide if we are the car behind (less far down the edge) then slow down
                 #     # this is not a realistic interaction and only occurs due to the graphical display of the simulation
-                """
 
                 elif car.target_node() == self.target_node():
 
@@ -683,7 +682,7 @@ def main():
         vehicles_per_second[1] = sliders[1][0].value    # cars
         vehicles_per_second[2] = sliders[2][0].value    # lorrys
         vehicles_per_second[3] = sliders[3][0].value    # motorbikes
-        vehicles_per_second[4] = vehicles_per_second[3] + vehicles_per_second[2] + vehicles_per_second[1] + vehicles_per_second[0]
+        vehicles_per_second[4] = vehicles_per_second[3] + vehicles_per_second[2] + vehicles_per_second[1]
 
 
         pygame.display.update()
