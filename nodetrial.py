@@ -319,7 +319,7 @@ class trafficlight:
         self.light_img = pygame.transform.scale(self.light_img,(15,35)) 
         self.rectlight = self.light_img.get_rect(center=(x,y))
         self.timer = 0.0
-        self.lightlengths = [3.0,0.5,3.0,0.8]
+        """ self.lightlengths = [3.0,0.5,3.0,0.8]"""
         self.angle = angle
 
         # print("x:",self.x,"     y:",self.y,"    degangle:",self.angle,"     radangle",math.radians(self.angle))
@@ -373,13 +373,6 @@ def lightatnode_init(node):
 
 def lightatnode_change(node,rotationnum):
     traffic_lights[node][rotationnum].changecolour()
-
-def pause(nodes_with_lights):
-    for key in nodes_with_lights.keys():
-        for light in nodes_with_lights[key]:
-            print(light.state)
-
-
 
 
 #GLOBAL DYKSTRA FUNCTIONS:
@@ -557,6 +550,7 @@ def main():
     last = time.time()
 
 # stats window
+    # vehicle spawns
     vehicle_slidernum = 3   # how many sliders are there (- top slider)
     sliders = []
     y_coord = 175   # starting y coordinate for sliders (increases by 75 each iteration)
@@ -566,15 +560,12 @@ def main():
     for i in range(vehicle_slidernum):
         y_coord += 75
         sliders.append([py_singl_slider.PySinglSlider(x=1485,y=y_coord,min_value=2.0,max_value=100.0,initial_value=20.0),y_coord])
-        
 
-        """
-    slider1 = py_singl_slider.PySinglSlider(x=1475,y=100,min_value=0,max_value=100,initial_value=20)
-    slider2 = py_singl_slider.PySinglSlider(x=1475,y=150,min_value=0,max_value=100,initial_value=20)
-    slider3 = py_singl_slider.PySinglSlider(x=1475,y=200,min_value=0,max_value=100,initial_value=20)
-    slider4 = py_singl_slider.PySinglSlider(x=1475,y=250,min_value=0,max_value=100,initial_value=20)
-    slider5 = py_singl_slider.PySinglSlider(x=1475,y=300,min_value=0,max_value=100,initial_value=20)
-    """
+    # traffic light timings
+    
+    for i in range(len(nodes_with_lights.keys())):
+        y_coord += 75
+        sliders.append([py_singl_slider.PySinglSlider(x=1485,y=y_coord,min_value=2.0,max_value=100.0,initial_value=60.0),y_coord]) 
         
     # traffic light button
     run_traffic_lights = True
@@ -650,11 +641,14 @@ def main():
 # B turns R, C turns G
 # C turns RY etc
 
+#               nodes_with_lights[node] = [lightindex,phase,nextlight,greentime,yellowtime,light_change_timer]
+
         if run_traffic_lights == True:      # has the user enabled traffic lights
 
             for node in nodes_with_lights:
 
                 nodes_with_lights[node][5] += dt
+                
 
                 currentlight = nodes_with_lights[node][0]
                 nodes_with_lights[node][2] = (nodes_with_lights[node][0]+1)%len(traffic_lights[node])
@@ -710,14 +704,22 @@ def main():
         slidertexts.append(font.render(f"Chance for lorry: {sliders[2][0].value:.2f}",True,(0,0,0)))
         slidertexts.append(font.render(f"Chance for motorbike: {sliders[3][0].value:.2f}",True,(0,0,0)))
 
+        for i,node in enumerate(nodes_with_lights.keys()):
+            slidertexts.append(font.render(f"Trafficlight {node} green time: {sliders[4+i][0].value/5:.2f}",True,(0,0,0)))
+
         for slidertext in enumerate(slidertexts):
             screen.blit(slidertext[1],(1470,sliders[slidertext[0]][1]-20))
-
+        
+        # vehicle rates
         vehicles_per_second[0] = sliders[0][0].value    # master   
         vehicles_per_second[1] = sliders[1][0].value    # cars
         vehicles_per_second[2] = sliders[2][0].value    # lorrys
         vehicles_per_second[3] = sliders[3][0].value    # motorbikes
-        vehicles_per_second[4] = vehicles_per_second[3] + vehicles_per_second[2] + vehicles_per_second[1]
+        vehicles_per_second[4] = vehicles_per_second[3] + vehicles_per_second[2] + vehicles_per_second[1] #total cars,lorrys,mbikes
+
+        # traffic timing
+        for i,node in enumerate(nodes_with_lights.keys()):
+            nodes_with_lights[node][3] = sliders[4+i][0].value/5
 
     # LIGHT TOGGLE
         manager.draw_ui(screen)
@@ -729,27 +731,36 @@ def main():
 main()
 pygame.quit()
 
-# traffic lights go right way                                                       # done
-# multiple traffic lights                                                           # done
-# random path                                                                       # done
-# maybe overlapping objects in order to "stresst" stress test                       # done
+# done
+# traffic lights go right way
+# multiple traffic lights
+# random path
+# maybe overlapping objects in order to "stresst" stress test
+# error at entry nodes stopping                                             
+# error at crossing nodes traffic                                             
 
-# error at entry nodes stopping                                                     # done
-# error at crossing nodes traffic                                                   # done
-
-# cars shouldnt stop at traffic lights if they are already past the traffic light   # done
+# cars shouldnt stop at traffic lights if they are already past the traffic light 
 
 # new vehicles (lorry,motorbike,bus):                                               
-#       if nearcar car is a lorry, mindist is larger (because larger img)           # done
-
-# new roads (curved, T-junction)
+#       if nearcar car is a lorry, mindist is larger (because larger img)  
 
 # add UI
 # add statistics in UI
 
-# change speed limits:
-#       select a road, option menu pops up
+# slider for main "spawning"
+# slider for individual vehicle %
+# slider for traffic light rotation speed
+# toggle for traffic lights on or off
 
+
+"""to-do"""
+"""new roads (curved, T-junction)"""
+
+
+"""
+change speed limits:
+      select a road, option menu pops up"""
+"""
 # add tools to change traffic light timings:
 #       select a node, option menu pops up
 
@@ -758,9 +769,4 @@ pygame.quit()
 # traffic lights can be on diagonal roads ~~> Tx = 74.5sin(25-arctan((x1-x2)/y1-y2))),  Ty = 74.5cos(25-arctan((x1-x2)/y1-y2)))
 
 # spawn car at selected enterance
-# block roads
-
-# slider for main "spawning"
-# slider for individual vehicle %
-# slider for traffic light rotation speed
-# toggle for traffic lights on or off
+# block roads"""
