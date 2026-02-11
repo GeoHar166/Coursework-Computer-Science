@@ -565,7 +565,7 @@ def main():
     
     for i in range(len(nodes_with_lights.keys())):
         y_coord += 75
-        sliders.append([py_singl_slider.PySinglSlider(x=1485,y=y_coord,min_value=2.0,max_value=100.0,initial_value=60.0),y_coord]) 
+        sliders.append([py_singl_slider.PySinglSlider(x=1485,y=y_coord,min_value=0.0,max_value=100.0,initial_value=30.0),y_coord]) 
         
     # traffic light button
     run_traffic_lights = True
@@ -705,7 +705,7 @@ def main():
         slidertexts.append(font.render(f"Chance for motorbike: {sliders[3][0].value:.2f}",True,(0,0,0)))
 
         for i,node in enumerate(nodes_with_lights.keys()):
-            slidertexts.append(font.render(f"Trafficlight {node} green time: {sliders[4+i][0].value/5:.2f}",True,(0,0,0)))
+            slidertexts.append(font.render(f"Trafficlight {node} green time: {(sliders[4+i][0].value+10)/10:.2f}",True,(0,0,0)))
 
         for slidertext in enumerate(slidertexts):
             screen.blit(slidertext[1],(1470,sliders[slidertext[0]][1]-20))
@@ -719,7 +719,7 @@ def main():
 
         # traffic timing
         for i,node in enumerate(nodes_with_lights.keys()):
-            nodes_with_lights[node][3] = sliders[4+i][0].value/5
+            nodes_with_lights[node][3] = (sliders[4+i][0].value+10)/10
 
     # LIGHT TOGGLE
         manager.draw_ui(screen)
